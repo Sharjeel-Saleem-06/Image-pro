@@ -29,7 +29,7 @@ export const getImageInfo = (file: File): Promise<ImageInfo> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
-    
+
     img.onload = () => {
       const info: ImageInfo = {
         width: img.naturalWidth,
@@ -41,12 +41,12 @@ export const getImageInfo = (file: File): Promise<ImageInfo> => {
       URL.revokeObjectURL(url);
       resolve(info);
     };
-    
+
     img.onerror = () => {
       URL.revokeObjectURL(url);
       reject(new Error('Failed to load image'));
     };
-    
+
     img.src = url;
   });
 };
@@ -60,23 +60,38 @@ export const convertImageFormat = async (
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
-    
+
     img.onload = () => {
       // Set canvas dimensions
       canvas.width = options.maxWidth || img.naturalWidth;
       canvas.height = options.maxHeight || img.naturalHeight;
-      
+
       // Maintain aspect ratio if only one dimension is specified
       if (options.maxWidth && !options.maxHeight) {
         canvas.height = (canvas.width / img.naturalWidth) * img.naturalHeight;
       } else if (options.maxHeight && !options.maxWidth) {
         canvas.width = (canvas.height / img.naturalHeight) * img.naturalWidth;
       }
-      
+
       // Draw image on canvas
       ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-      
+
       // Convert to blob
+      const getMimeType = (format: string): string => {
+        const map: Record<string, string> = {
+          jpg: 'image/jpeg',
+          jpeg: 'image/jpeg',
+          png: 'image/png',
+          webp: 'image/webp',
+          gif: 'image/gif',
+          bmp: 'image/bmp',
+          tiff: 'image/tiff',
+          ico: 'image/x-icon',
+          avif: 'image/avif'
+        };
+        return map[format] || `image/${format}`;
+      };
+
       canvas.toBlob(
         (blob) => {
           if (blob) {
@@ -85,11 +100,11 @@ export const convertImageFormat = async (
             reject(new Error('Failed to convert image'));
           }
         },
-        `image/${options.format}`,
+        getMimeType(options.format),
         options.quality / 100
       );
     };
-    
+
     img.onerror = () => reject(new Error('Failed to load image'));
     img.src = URL.createObjectURL(file);
   });
@@ -124,7 +139,7 @@ export const resizeImage = (
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
-    
+
     img.onload = () => {
       if (maintainAspectRatio) {
         const aspectRatio = img.naturalWidth / img.naturalHeight;
@@ -134,12 +149,12 @@ export const resizeImage = (
           height = width / aspectRatio;
         }
       }
-      
+
       canvas.width = width;
       canvas.height = height;
-      
+
       ctx?.drawImage(img, 0, 0, width, height);
-      
+
       canvas.toBlob(
         (blob) => {
           if (blob) resolve(blob);
@@ -148,7 +163,7 @@ export const resizeImage = (
         'image/png'
       );
     };
-    
+
     img.onerror = () => reject(new Error('Failed to load image'));
     img.src = URL.createObjectURL(file);
   });
@@ -169,11 +184,11 @@ export const applyImageFilters = (
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
-    
+
     img.onload = () => {
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
-      
+
       // Build filter string
       const filterParts = [];
       if (filters.brightness !== undefined) filterParts.push(`brightness(${filters.brightness}%)`);
@@ -181,12 +196,12 @@ export const applyImageFilters = (
       if (filters.saturation !== undefined) filterParts.push(`saturate(${filters.saturation}%)`);
       if (filters.blur !== undefined) filterParts.push(`blur(${filters.blur}px)`);
       if (filters.hue !== undefined) filterParts.push(`hue-rotate(${filters.hue}deg)`);
-      
+
       if (ctx) {
         ctx.filter = filterParts.join(' ');
         ctx.drawImage(img, 0, 0);
       }
-      
+
       canvas.toBlob(
         (blob) => {
           if (blob) resolve(blob);
@@ -195,7 +210,7 @@ export const applyImageFilters = (
         'image/png'
       );
     };
-    
+
     img.onerror = () => reject(new Error('Failed to load image'));
     img.src = URL.createObjectURL(file);
   });
@@ -207,21 +222,21 @@ export const rotateImage = (file: File, degrees: number): Promise<Blob> => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
-    
+
     img.onload = () => {
       const radians = (degrees * Math.PI) / 180;
       const sin = Math.abs(Math.sin(radians));
       const cos = Math.abs(Math.cos(radians));
-      
+
       canvas.width = img.naturalWidth * cos + img.naturalHeight * sin;
       canvas.height = img.naturalWidth * sin + img.naturalHeight * cos;
-      
+
       if (ctx) {
         ctx.translate(canvas.width / 2, canvas.height / 2);
         ctx.rotate(radians);
         ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
       }
-      
+
       canvas.toBlob(
         (blob) => {
           if (blob) resolve(blob);
@@ -230,7 +245,7 @@ export const rotateImage = (file: File, degrees: number): Promise<Blob> => {
         'image/png'
       );
     };
-    
+
     img.onerror = () => reject(new Error('Failed to load image'));
     img.src = URL.createObjectURL(file);
   });
@@ -242,11 +257,11 @@ export const flipImage = (file: File, horizontal: boolean, vertical: boolean): P
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
-    
+
     img.onload = () => {
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
-      
+
       if (ctx) {
         ctx.save();
         ctx.scale(horizontal ? -1 : 1, vertical ? -1 : 1);
@@ -257,7 +272,7 @@ export const flipImage = (file: File, horizontal: boolean, vertical: boolean): P
         );
         ctx.restore();
       }
-      
+
       canvas.toBlob(
         (blob) => {
           if (blob) resolve(blob);
@@ -266,7 +281,7 @@ export const flipImage = (file: File, horizontal: boolean, vertical: boolean): P
         'image/png'
       );
     };
-    
+
     img.onerror = () => reject(new Error('Failed to load image'));
     img.src = URL.createObjectURL(file);
   });
@@ -284,13 +299,13 @@ export const cropImage = (
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
-    
+
     img.onload = () => {
       canvas.width = width;
       canvas.height = height;
-      
+
       ctx?.drawImage(img, x, y, width, height, 0, 0, width, height);
-      
+
       canvas.toBlob(
         (blob) => {
           if (blob) resolve(blob);
@@ -299,7 +314,7 @@ export const cropImage = (
         'image/png'
       );
     };
-    
+
     img.onerror = () => reject(new Error('Failed to load image'));
     img.src = URL.createObjectURL(file);
   });
@@ -311,24 +326,24 @@ export const generateThumbnail = (file: File, size = 150): Promise<string> => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
-    
+
     img.onload = () => {
       const aspectRatio = img.naturalWidth / img.naturalHeight;
       let { width, height } = { width: size, height: size };
-      
+
       if (aspectRatio > 1) {
         height = size / aspectRatio;
       } else {
         width = size * aspectRatio;
       }
-      
+
       canvas.width = width;
       canvas.height = height;
-      
+
       ctx?.drawImage(img, 0, 0, width, height);
       resolve(canvas.toDataURL('image/jpeg', 0.8));
     };
-    
+
     img.onerror = () => reject(new Error('Failed to generate thumbnail'));
     img.src = URL.createObjectURL(file);
   });
@@ -336,34 +351,37 @@ export const generateThumbnail = (file: File, size = 150): Promise<string> => {
 
 // Validate image file
 export const validateImageFile = (file: File): { valid: boolean; error?: string } => {
-  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff'];
+  const validTypes = [
+    'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+    'image/bmp', 'image/tiff', 'image/avif', 'image/x-icon', 'image/vnd.microsoft.icon'
+  ];
   const maxSize = 50 * 1024 * 1024; // 50MB
-  
+
   if (!validTypes.includes(file.type)) {
     return { valid: false, error: 'Invalid file type. Please select an image file.' };
   }
-  
+
   if (file.size > maxSize) {
     return { valid: false, error: 'File size too large. Maximum size is 50MB.' };
   }
-  
+
   return { valid: true };
 };
 
 // Get optimal format recommendation
 export const getFormatRecommendation = async (file: File): Promise<string> => {
   const info = await getImageInfo(file);
-  
+
   // Recommend WebP for photos with good browser support
   if (info.width * info.height > 500000) { // Large images
     return 'webp';
   }
-  
+
   // Recommend PNG for images with transparency or small images
   if (file.type === 'image/png' || info.width * info.height < 100000) {
     return 'png';
   }
-  
+
   // Default to JPEG for photos
   return 'jpeg';
 };
@@ -383,4 +401,56 @@ export const downloadBlob = (blob: Blob, filename: string) => {
 // Convert blob to file
 export const blobToFile = (blob: Blob, filename: string): File => {
   return new File([blob], filename, { type: blob.type });
+};
+
+// Preprocess image for better OCR results (Grayscale + Thresholding)
+export const preprocessImageForOCR = async (file: File): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+
+    img.onload = () => {
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'));
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0);
+
+      // Get image data
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+
+      // 1. Grayscale Conversion
+      // 2. Simple Binarization (Thresholding) to remove noise
+      const threshold = 120; // Slightly lower threshold for cleaner dark text
+
+      for (let i = 0; i < data.length; i += 4) {
+        // Standard luminosity formula: 0.21 R + 0.72 G + 0.07 B
+        const avg = (0.21 * data[i]) + (0.72 * data[i + 1]) + (0.07 * data[i + 2]);
+
+        // Binarize
+        const color = avg > threshold ? 255 : 0;
+
+        data[i] = color;     // R
+        data[i + 1] = color; // G
+        data[i + 2] = color; // B
+        // Alpha unchanged
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error('Failed to preprocess image'));
+      }, 'image/png');
+    };
+
+    img.onerror = () => reject(new Error('Failed to load image for preprocessing'));
+    img.src = URL.createObjectURL(file);
+  });
 }; 

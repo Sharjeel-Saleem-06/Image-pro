@@ -4,7 +4,14 @@
   "version": "1.0.0",
   "description": "Advanced image processing platform built with React, TypeScript, and modern web technologies",
   "author": "Developed with Cursor AI",
-  "keywords": ["image-processing", "react", "typescript", "vite", "tailwindcss", "cursor-ai"],
+  "keywords": [
+    "image-processing",
+    "react",
+    "typescript",
+    "vite",
+    "tailwindcss",
+    "cursor-ai"
+  ],
   "homepage": "https://imagepro-advanced.netlify.app",
   "repository": {
     "type": "git",
@@ -21,6 +28,7 @@
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
     "@hookform/resolvers": "^3.10.0",
+    "@imgly/background-removal": "^1.7.0",
     "@radix-ui/react-accordion": "^1.2.10",
     "@radix-ui/react-alert-dialog": "^1.1.13",
     "@radix-ui/react-aspect-ratio": "^1.1.6",
@@ -48,6 +56,7 @@
     "@radix-ui/react-toggle": "^1.1.8",
     "@radix-ui/react-toggle-group": "^1.1.9",
     "@radix-ui/react-tooltip": "^1.2.6",
+    "@supabase/supabase-js": "^2.87.1",
     "@tanstack/react-query": "^5.56.2",
     "@tensorflow/tfjs": "^4.22.0",
     "@tensorflow/tfjs-backend-webgl": "^4.22.0",
@@ -68,10 +77,12 @@
     "lucide-react": "^0.507.0",
     "motion": "^12.9.7",
     "next-themes": "^0.3.0",
+    "onnxruntime-web": "^1.23.2",
     "pizzip": "^3.2.0",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
+    "react-easy-crop": "^5.5.6",
     "react-hook-form": "^7.56.2",
     "react-konva": "^19.0.4",
     "react-resizable-panels": "^2.1.9",
@@ -101,6 +112,7 @@
     "tailwindcss": "^3.4.11",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
-    "vite": "^5.4.1"
+    "vite": "^5.4.1",
+    "vite-plugin-static-copy": "^3.1.4"
   }
 }

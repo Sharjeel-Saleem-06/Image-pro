@@ -16,65 +16,66 @@ import {
   Code,
   Globe,
   Heart,
-  Star } from
-'lucide-react';
+  Star
+} from
+  'lucide-react';
 
 const About = () => {
   const steps = [
-  {
-    step: 1,
-    title: 'Upload Your Image',
-    description: 'Drag and drop or click to upload images in any format',
-    icon: Upload,
-    color: 'from-blue-500 to-cyan-500'
-  },
-  {
-    step: 2,
-    title: 'Choose Your Tool',
-    description: 'Select from conversion, editing, or AI enhancement tools',
-    icon: Wand2,
-    color: 'from-purple-500 to-pink-500'
-  },
-  {
-    step: 3,
-    title: 'Process & Download',
-    description: 'Let our AI work its magic and download your enhanced image',
-    icon: Download,
-    color: 'from-green-500 to-emerald-500'
-  }];
+    {
+      step: 1,
+      title: 'Upload Your Image',
+      description: 'Drag and drop or click to upload images in any format',
+      icon: Upload,
+      color: 'from-blue-500 to-cyan-500'
+    },
+    {
+      step: 2,
+      title: 'Choose Your Tool',
+      description: 'Select from conversion, editing, or AI enhancement tools',
+      icon: Wand2,
+      color: 'from-purple-500 to-pink-500'
+    },
+    {
+      step: 3,
+      title: 'Process & Download',
+      description: 'Let our AI work its magic and download your enhanced image',
+      icon: Download,
+      color: 'from-green-500 to-emerald-500'
+    }];
 
 
   const features = [
-  {
-    title: 'No Registration Required',
-    description: 'Start processing images immediately without creating an account',
-    icon: Users
-  },
-  {
-    title: 'Completely Free',
-    description: 'All features are free to use with no hidden costs or limits',
-    icon: Heart
-  },
-  {
-    title: 'Privacy First',
-    description: 'All processing happens locally in your browser - no images uploaded to servers',
-    icon: Shield
-  },
-  {
-    title: 'Lightning Fast',
-    description: 'Powered by optimized algorithms for quick client-side processing',
-    icon: Zap
-  },
-  {
-    title: 'AI-Powered',
-    description: 'Advanced machine learning running directly in your browser',
-    icon: Sparkles
-  },
-  {
-    title: 'Multi-Format Support',
-    description: 'Support for 8+ image formats including PNG, JPG, WebP, PDF',
-    icon: ImageIcon
-  }];
+    {
+      title: 'No Registration Required',
+      description: 'Start processing images immediately without creating an account',
+      icon: Users
+    },
+    {
+      title: 'Completely Free',
+      description: 'All features are free to use with no hidden costs or limits',
+      icon: Heart
+    },
+    {
+      title: 'Privacy First',
+      description: 'All processing happens locally in your browser - no images uploaded to servers',
+      icon: Shield
+    },
+    {
+      title: 'Lightning Fast',
+      description: 'Powered by optimized algorithms for quick client-side processing',
+      icon: Zap
+    },
+    {
+      title: 'AI-Powered',
+      description: 'Advanced machine learning running directly in your browser',
+      icon: Sparkles
+    },
+    {
+      title: 'Multi-Format Support',
+      description: 'Support for 8+ image formats including PNG, JPG, WebP, PDF',
+      icon: ImageIcon
+    }];
 
 
   const technologies = [
@@ -89,16 +90,15 @@ const About = () => {
     { name: 'TensorFlow.js', category: 'AI/ML' },
     { name: 'Fabric.js', category: 'Canvas Editor' },
     { name: 'JSZip', category: 'File Handling' },
-    { name: 'Cursor AI', category: 'Development' },
     { name: 'Netlify', category: 'Hosting' }
   ];
 
 
   const stats = [
-  { number: '1M+', label: 'Images Processed', icon: ImageIcon },
-  { number: '50+', label: 'Supported Formats', icon: Code },
-  { number: '100K+', label: 'Happy Users', icon: Users },
-  { number: '99.9%', label: 'Uptime', icon: Zap }];
+    { number: '1M+', label: 'Images Processed', icon: ImageIcon },
+    { number: '50+', label: 'Supported Formats', icon: Code },
+    { number: '100K+', label: 'Happy Users', icon: Users },
+    { number: '99.9%', label: 'Uptime', icon: Zap }];
 
 
   return (
@@ -115,7 +115,7 @@ const About = () => {
               How <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">ImagePro</span> Works
             </h1>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              Professional image processing made simple. Our AI-powered platform transforms 
+              Professional image processing made simple. Our AI-powered platform transforms
               your images with just a few clicks.
             </p>
           </motion.div>
@@ -156,9 +156,9 @@ const About = () => {
                         <p className="text-gray-600 dark:text-gray-300">{step.description}</p>
                       </CardContent>
                     </Card>
-                    
+
                     {index < steps.length - 1 &&
-                    <div className="hidden md:block absolute top-1/2 -right-4 z-10">
+                      <div className="hidden md:block absolute top-1/2 -right-4 z-10">
                         <ArrowRight className="w-8 h-8 text-gray-300 dark:text-gray-600" />
                       </div>
                     }
@@ -218,7 +218,7 @@ const About = () => {
                 <h2 className="text-3xl md:text-4xl font-bold mb-4">Trusted by Thousands</h2>
                 <p className="text-xl opacity-90">Join our growing community of image processing enthusiasts</p>
               </div>
-              
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                 {stats.map((stat, index) => {
                   const Icon = stat.icon;
@@ -255,12 +255,12 @@ const About = () => {
 
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {technologies.map((tech, index) =>
-              <motion.div
-                key={tech.name}
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ scale: 1.05 }}>
+                <motion.div
+                  key={tech.name}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.05 }}
+                  whileHover={{ scale: 1.05 }}>
 
                   <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-lg border-0 shadow-lg hover:shadow-xl transition-all">
                     <CardContent className="p-4 text-center">
@@ -289,7 +289,7 @@ const About = () => {
                     </div>
                     <h2 className="text-3xl font-bold mb-6">Your Privacy Matters</h2>
                     <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
-                      We take your privacy seriously. All image processing happens locally in your browser - 
+                      We take your privacy seriously. All image processing happens locally in your browser -
                       no images are ever uploaded to our servers, ensuring complete privacy and security.
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">

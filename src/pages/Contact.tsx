@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react';
 import { motion } from 'motion/react';
+import { useToast } from "@/hooks/use-toast";
+import emailjs from '@emailjs/browser';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -89,7 +91,7 @@ const Contact = () => {
     rating: 0,
     newsletter: false
   });
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [activeTab, setActiveTab] = useState('contact');
@@ -104,36 +106,12 @@ const Contact = () => {
 
   const teamMembers: TeamMember[] = [
     {
-      name: 'Sarah Johnson',
-      role: 'Product Manager',
-      email: 'sarah@imagepro.com',
-      avatar: '👩‍💼',
-      expertise: ['Product Strategy', 'User Experience', 'Feature Planning'],
-      bio: 'Leading product development with 8+ years in image processing tools.'
-    },
-    {
-      name: 'Alex Chen',
-      role: 'Lead Developer',
-      email: 'alex@imagepro.com',
+      name: 'Muhammad Sharjeel',
+      role: 'Full Stack Developer',
+      email: 'sharry00010@gmail.com',
       avatar: '👨‍💻',
-      expertise: ['AI/ML', 'Image Processing', 'Web Development'],
-      bio: 'Expert in computer vision and AI-powered image enhancement algorithms.'
-    },
-    {
-      name: 'Maria Rodriguez',
-      role: 'Customer Success',
-      email: 'maria@imagepro.com',
-      avatar: '👩‍🎨',
-      expertise: ['Customer Support', 'Training', 'User Onboarding'],
-      bio: 'Dedicated to ensuring every user has an amazing experience with ImagePro.'
-    },
-    {
-      name: 'David Kim',
-      role: 'Security Engineer',
-      email: 'david@imagepro.com',
-      avatar: '👨‍🔧',
-      expertise: ['Data Security', 'Privacy', 'Infrastructure'],
-      bio: 'Ensuring your data stays safe with enterprise-grade security measures.'
+      expertise: ['Full Stack Development', 'AI/ML Integration', 'UI/UX Design', 'Cloud Architecture'],
+      bio: 'I am a passionate Full Stack Developer dedicated to building intuitive and powerful web applications. ImagePro is my personal project demonstrating strict security, local processing, and modern UI design.'
     }
   ];
 
@@ -193,10 +171,10 @@ const Contact = () => {
       icon: Mail,
       title: 'Email Support',
       description: 'Get detailed help via email',
-      contact: 'support@imagepro.com',
+      contact: 'sharry00010@gmail.com',
       response: 'Usually within 24 hours',
       color: 'from-blue-500 to-cyan-500',
-      action: () => window.open('mailto:support@imagepro.com')
+      action: () => window.open('mailto:sharry00010@gmail.com')
     },
     {
       icon: MessageCircle,
@@ -211,58 +189,99 @@ const Contact = () => {
       icon: Phone,
       title: 'Phone Support',
       description: 'Speak directly with our team',
-      contact: '+1 (555) 123-4567',
-      response: 'Mon-Fri, 9 AM - 6 PM EST',
+      contact: '+92 332 5760344',
+      response: 'Mon-Fri, 9 AM - 6 PM PST',
       color: 'from-purple-500 to-pink-500',
-      action: () => window.open('tel:+15551234567')
-    },
-    {
-      icon: Github,
-      title: 'GitHub Issues',
-      description: 'Report bugs and request features',
-      contact: 'github.com/imagepro/issues',
-      response: 'Community-driven support',
-      color: 'from-gray-600 to-gray-800',
-      action: () => window.open('https://github.com/imagepro/issues')
+      action: () => window.open('tel:+923325760344')
     }
   ];
 
   const businessInfo = {
     company: 'ImagePro Technologies Inc.',
-    address: '123 Innovation Drive, Suite 400, San Francisco, CA 94105',
-    phone: '+1 (555) 123-4567',
-    email: 'hello@imagepro.com',
+    address: 'Islamabad, Pakistan',
+    phone: '+92 332 5760344',
+    email: 'sharry00010@gmail.com',
     hours: 'Monday - Friday: 9:00 AM - 6:00 PM PST',
     founded: '2023',
-    employees: '15-50',
-    headquarters: 'San Francisco, CA'
+    employees: '1-10',
+    headquarters: 'Islamabad, Pakistan'
   };
+
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+      const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+      const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 
-    setSubmitted(true);
-    setIsSubmitting(false);
-    
-    // Reset form after 3 seconds
-    setTimeout(() => {
-      setSubmitted(false);
-      setFormData({
-        name: '',
-        email: '',
-        company: '',
-        subject: '',
-        category: 'general',
-        priority: 'medium',
-        message: '',
-        rating: 0,
-        newsletter: false
+      if (!serviceId || !templateId || !publicKey) {
+        console.error('EmailJS keys are missing');
+        throw new Error('Configuration Error');
+      }
+
+      // Format the comprehensive message
+      const detailedMessage = `
+Message: ${formData.message}
+
+Additional Details:
+----------------
+Company: ${formData.company || 'N/A'}
+Category: ${formData.category}
+Priority: ${formData.priority}
+Rating: ${formData.rating > 0 ? formData.rating + '/5' : 'N/A'}
+Newsletter: ${formData.newsletter ? 'Yes' : 'No'}
+      `.trim();
+
+      await emailjs.send(
+        serviceId,
+        templateId,
+        {
+          from_name: formData.name,
+          from_email: formData.email,
+          subject: formData.subject,
+          message: detailedMessage,
+          reply_to: formData.email,
+        },
+        publicKey
+      );
+
+      setSubmitted(true);
+      toast({
+        title: "Message Sent Successfully!",
+        description: "We'll get back to you within 24 hours.",
+        className: "bg-green-500 text-white border-none"
       });
-    }, 3000);
+
+      // Reset form after 3 seconds
+      setTimeout(() => {
+        setSubmitted(false);
+        setFormData({
+          name: '',
+          email: '',
+          company: '',
+          subject: '',
+          category: 'general',
+          priority: 'medium',
+          message: '',
+          rating: 0,
+          newsletter: false
+        });
+      }, 5000);
+
+    } catch (error) {
+      console.error('EmailJS Error:', error);
+      toast({
+        title: "Failed to send message",
+        description: "Please try again or email us directly.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -283,10 +302,10 @@ const Contact = () => {
 
   const sendChatMessage = () => {
     if (!chatInput.trim()) return;
-    
+
     const userMessage = { type: 'user', message: chatInput, time: new Date() };
     setChatMessages(prev => [...prev, userMessage]);
-    
+
     // Simulate bot response
     setTimeout(() => {
       const responses = [
@@ -302,7 +321,7 @@ const Contact = () => {
       };
       setChatMessages(prev => [...prev, botMessage]);
     }, 1000);
-    
+
     setChatInput('');
   };
 
@@ -310,8 +329,8 @@ const Contact = () => {
     navigator.clipboard.writeText(text);
   };
 
-  const filteredFAQs = faqCategory === 'all' 
-    ? faqs 
+  const filteredFAQs = faqCategory === 'all'
+    ? faqs
     : faqs.filter(faq => faq.category === faqCategory);
 
   const faqCategories = [
@@ -339,10 +358,10 @@ const Contact = () => {
               </span>
             </h1>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">
-              We're here to help! Whether you have questions, feedback, or need support, 
+              We're here to help! Whether you have questions, feedback, or need support,
               our team is ready to assist you.
             </p>
-            
+
             {/* Quick Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
               {[
@@ -379,8 +398,8 @@ const Contact = () => {
                 Contact
               </TabsTrigger>
               <TabsTrigger value="team" className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Our Team
+                <User className="w-4 h-4" />
+                About Me
               </TabsTrigger>
               <TabsTrigger value="faq" className="flex items-center gap-2">
                 <HelpCircle className="w-4 h-4" />
@@ -395,22 +414,22 @@ const Contact = () => {
             {/* Contact Tab */}
             <TabsContent value="contact" className="space-y-8">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Contact Form */}
+                {/* Contact Form */}
                 <div className="lg:col-span-2">
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
+                  <motion.div
+                    initial={{ opacity: 0, x: -50 }}
                     animate={{ opacity: 1, x: 0 }}
                   >
                     <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-lg">
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <MessageSquare className="w-6 h-6" />
-                    Send us a Message
-                  </CardTitle>
+                          Send us a Message
+                        </CardTitle>
                         <p className="text-gray-600 dark:text-gray-300">
                           Fill out the form below and we'll get back to you as soon as possible.
                         </p>
-                </CardHeader>
+                      </CardHeader>
                       <CardContent>
                         {submitted ? (
                           <motion.div
@@ -431,25 +450,25 @@ const Contact = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div>
                                 <Label htmlFor="name">Full Name *</Label>
-                        <Input
-                          id="name"
-                          name="name"
-                          value={formData.name}
-                          onChange={handleInputChange}
-                          required
+                                <Input
+                                  id="name"
+                                  name="name"
+                                  value={formData.name}
+                                  onChange={handleInputChange}
+                                  required
                                   className="mt-1"
                                   placeholder="John Doe"
                                 />
-                      </div>
+                              </div>
                               <div>
                                 <Label htmlFor="email">Email Address *</Label>
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          required
+                                <Input
+                                  id="email"
+                                  name="email"
+                                  type="email"
+                                  value={formData.email}
+                                  onChange={handleInputChange}
+                                  required
                                   className="mt-1"
                                   placeholder="john@example.com"
                                 />
@@ -483,18 +502,18 @@ const Contact = () => {
                                     <SelectItem value="partnership">Partnership</SelectItem>
                                   </SelectContent>
                                 </Select>
-                      </div>
-                    </div>
+                              </div>
+                            </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div>
                                 <Label htmlFor="subject">Subject *</Label>
-                      <Input
-                        id="subject"
-                        name="subject"
-                        value={formData.subject}
-                        onChange={handleInputChange}
-                        required
+                                <Input
+                                  id="subject"
+                                  name="subject"
+                                  value={formData.subject}
+                                  onChange={handleInputChange}
+                                  required
                                   className="mt-1"
                                   placeholder="Brief description of your inquiry"
                                 />
@@ -527,30 +546,29 @@ const Contact = () => {
                                 className="mt-1"
                                 placeholder="Please provide as much detail as possible about your inquiry..."
                               />
-                    </div>
+                            </div>
 
-                    {/* Rating */}
+                            {/* Rating */}
                             <div>
                               <Label>Rate your experience with ImagePro (optional)</Label>
                               <div className="flex gap-1 mt-2">
                                 {[1, 2, 3, 4, 5].map((rating) => (
-                        <motion.button
-                          key={rating}
-                          type="button"
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => handleRating(rating)}
-                          className={`p-1 ${
-                                      formData.rating >= rating
-                                        ? 'text-yellow-400'
-                                        : 'text-gray-300 dark:text-gray-600'
-                                    }`}
+                                  <motion.button
+                                    key={rating}
+                                    type="button"
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => handleRating(rating)}
+                                    className={`p-1 ${formData.rating >= rating
+                                      ? 'text-yellow-400'
+                                      : 'text-gray-300 dark:text-gray-600'
+                                      }`}
                                   >
                                     <Star className="w-6 h-6 fill-current" />
-                          </motion.button>
+                                  </motion.button>
                                 ))}
-                      </div>
-                    </div>
+                              </div>
+                            </div>
 
                             {/* Newsletter */}
                             <div className="flex items-center space-x-2">
@@ -559,61 +577,61 @@ const Contact = () => {
                                 id="newsletter"
                                 name="newsletter"
                                 checked={formData.newsletter}
-                        onChange={handleInputChange}
+                                onChange={handleInputChange}
                                 className="rounded"
                               />
                               <Label htmlFor="newsletter" className="text-sm">
                                 Subscribe to our newsletter for updates and tips
                               </Label>
-                    </div>
+                            </div>
 
-                    <Button
-                      type="submit"
-                      disabled={isSubmitting}
+                            <Button
+                              type="submit"
+                              disabled={isSubmitting}
                               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                             >
                               {isSubmitting ? (
-                      <>
-                          <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                <>
+                                  <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                                     className="w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"
                                   />
-                          Sending...
+                                  Sending...
                                 </>
                               ) : (
-                      <>
+                                <>
                                   <Send className="w-4 h-4 mr-2" />
-                          Send Message
-                        </>
+                                  Send Message
+                                </>
                               )}
-                    </Button>
-                  </form>
+                            </Button>
+                          </form>
                         )}
-                </CardContent>
-              </Card>
-            </motion.div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
                 </div>
 
                 {/* Contact Methods */}
                 <div className="space-y-6">
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
+                  <motion.div
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 1, x: 0 }}
                     className="space-y-4"
                   >
                     <h3 className="text-xl font-semibold mb-4">Other Ways to Reach Us</h3>
                     {contactMethods.map((method, index) => {
                       const Icon = method.icon;
-                  return (
-                    <motion.div
+                      return (
+                        <motion.div
                           key={method.title}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: index * 0.1 }}
                           whileHover={{ scale: 1.02 }}
                         >
-                          <Card 
+                          <Card
                             className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-lg hover:shadow-lg transition-all cursor-pointer"
                             onClick={method.action}
                           >
@@ -679,19 +697,19 @@ const Contact = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="text-center mb-8"
               >
-                <h2 className="text-3xl font-bold mb-4">Meet Our Team</h2>
+                <h2 className="text-3xl font-bold mb-4">About the Developer</h2>
                 <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                  Our passionate team of experts is dedicated to making ImagePro the best image processing platform.
+                  ImagePro is designed and built by a single passionate developer.
                 </p>
               </motion.div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="max-w-2xl mx-auto">
                 {teamMembers.map((member, index) => (
                   <motion.div
                     key={member.name}
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
                   >
                     <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-lg hover:shadow-lg transition-all">
                       <CardContent className="p-6">
@@ -703,7 +721,7 @@ const Contact = () => {
                             <h3 className="text-xl font-semibold mb-1">{member.name}</h3>
                             <p className="text-blue-600 dark:text-blue-400 font-medium mb-2">{member.role}</p>
                             <p className="text-gray-600 dark:text-gray-300 text-sm mb-3">{member.bio}</p>
-                            
+
                             <div className="flex flex-wrap gap-1 mb-3">
                               {member.expertise.map((skill) => (
                                 <Badge key={skill} variant="secondary" className="text-xs">
@@ -711,15 +729,15 @@ const Contact = () => {
                                 </Badge>
                               ))}
                             </div>
-                            
+
                             <div className="flex items-center gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => window.open(`mailto:${member.email}`)}
+                                onClick={() => window.open('https://muhammad-sharjeel-portfolio.netlify.app/', '_blank')}
                               >
-                                <Mail className="w-4 h-4 mr-1" />
-                                Contact
+                                <Globe className="w-4 h-4 mr-1" />
+                                View Portfolio
                               </Button>
                               <Button
                                 variant="ghost"
@@ -791,7 +809,7 @@ const Contact = () => {
                             <ChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0" />
                           )}
                         </button>
-                        
+
                         {expandedFAQ === index && (
                           <motion.div
                             initial={{ opacity: 0, height: 0 }}
@@ -848,7 +866,7 @@ const Contact = () => {
                         <p className="text-sm text-gray-600 dark:text-gray-300">Legal Entity</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-start gap-3">
                       <MapPin className="w-5 h-5 text-gray-500 mt-1" />
                       <div>
@@ -856,7 +874,7 @@ const Contact = () => {
                         <p className="text-sm text-gray-600 dark:text-gray-300">{businessInfo.address}</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-3">
                       <Phone className="w-5 h-5 text-gray-500" />
                       <div>
@@ -864,7 +882,7 @@ const Contact = () => {
                         <p className="text-sm text-gray-600 dark:text-gray-300">Main Office</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-3">
                       <Mail className="w-5 h-5 text-gray-500" />
                       <div>
@@ -872,16 +890,16 @@ const Contact = () => {
                         <p className="text-sm text-gray-600 dark:text-gray-300">General Inquiries</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-3">
                       <Calendar className="w-5 h-5 text-gray-500" />
                       <div>
                         <p className="font-medium">Founded {businessInfo.founded}</p>
                         <p className="text-sm text-gray-600 dark:text-gray-300">Company Established</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {/* Mission & Values */}
                 <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-lg">
@@ -901,7 +919,7 @@ const Contact = () => {
                         To democratize professional image processing tools and make them accessible to everyone, everywhere.
                       </p>
                     </div>
-                    
+
                     <div>
                       <h4 className="font-semibold mb-2 flex items-center gap-2">
                         <Shield className="w-4 h-4" />
@@ -911,7 +929,7 @@ const Contact = () => {
                         Your data privacy is our top priority. We process images locally when possible and never store your files permanently.
                       </p>
                     </div>
-                    
+
                     <div>
                       <h4 className="font-semibold mb-2 flex items-center gap-2">
                         <Zap className="w-4 h-4" />
@@ -921,7 +939,7 @@ const Contact = () => {
                         We continuously integrate the latest AI and machine learning technologies to provide cutting-edge features.
                       </p>
                     </div>
-                    
+
                     <div>
                       <h4 className="font-semibold mb-2 flex items-center gap-2">
                         <Heart className="w-4 h-4" />
@@ -974,7 +992,7 @@ const Contact = () => {
 
           {/* Live Chat Widget */}
           {chatOpen && (
-                  <motion.div
+            <motion.div
               initial={{ opacity: 0, y: 50, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               className="fixed bottom-4 right-4 w-80 h-96 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border z-50"
@@ -991,27 +1009,26 @@ const Contact = () => {
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              
+
               <div className="flex flex-col h-80">
                 <div className="flex-1 p-4 overflow-y-auto space-y-3">
                   {chatMessages.map((msg, index) => (
                     <div
-                    key={index}
+                      key={index}
                       className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
-                        className={`max-w-xs px-3 py-2 rounded-lg text-sm ${
-                          msg.type === 'user'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
-                        }`}
+                        className={`max-w-xs px-3 py-2 rounded-lg text-sm ${msg.type === 'user'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                          }`}
                       >
                         {msg.message}
                       </div>
                     </div>
                   ))}
                   <div ref={chatEndRef} />
-          </div>
+                </div>
 
                 <div className="p-4 border-t">
                   <div className="flex gap-2">
@@ -1028,7 +1045,7 @@ const Contact = () => {
                   </div>
                 </div>
               </div>
-          </motion.div>
+            </motion.div>
           )}
 
           {/* Floating Chat Button */}

@@ -10,6 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import Layout from '@/components/Layout';
+import AuthRequiredModal from '@/components/AuthRequiredModal';
+import { useAuthRequired } from '@/hooks/useAuthRequired';
 import {
   Upload,
   Download,
@@ -66,18 +68,21 @@ const AIEnhancer = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [processingProgress, setProcessingProgress] = useState(0);
-  const [results, setResults] = useState<{[key: string]: ProcessingResult}>({});
+  const [results, setResults] = useState<{ [key: string]: ProcessingResult }>({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Tool-specific settings
   const [upscaleScale, setUpscaleScale] = useState([2]);
   const [styleTransferStyle, setStyleTransferStyle] = useState('sketch');
   const [asciiDensity, setAsciiDensity] = useState([10]);
   const [asciiWidth, setAsciiWidth] = useState([80]);
   const [asciiColored, setAsciiColored] = useState(false);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Auth requirement
+  const { showAuthModal, setShowAuthModal, requireAuth } = useAuthRequired();
 
   const aiTools: AITool[] = [
     {
@@ -135,11 +140,17 @@ const AIEnhancer = () => {
   ];
 
   const [activeCategory, setActiveCategory] = useState('all');
-  const filteredTools = activeCategory === 'all' 
-    ? aiTools 
+  const filteredTools = activeCategory === 'all'
+    ? aiTools
     : aiTools.filter(tool => tool.category === activeCategory);
 
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    // Check if user is authenticated
+    if (!requireAuth()) {
+      e.target.value = ''; // Reset input
+      return;
+    }
+
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
       setUploadedImage(file);
@@ -148,49 +159,49 @@ const AIEnhancer = () => {
       setSelectedTool(null);
       setError(null);
     }
-  }, []);
+  }, [requireAuth]);
 
   const processImage = async (toolId: string) => {
     if (!uploadedImage) return;
-    
+
     setSelectedTool(toolId);
     setIsProcessing(true);
     setProcessingProgress(0);
     setError(null);
-    
+
     const startTime = Date.now();
-    
+
     try {
       let result: string | Blob;
       let originalSize = uploadedImage.size;
       let newSize = 0;
-      
+
       // Progress simulation
       const progressInterval = setInterval(() => {
         setProcessingProgress(prev => Math.min(prev + 5, 90));
       }, 100);
-      
+
       switch (toolId) {
         case 'upscale':
           result = await upscaleImage(uploadedImage, upscaleScale[0]);
           newSize = (result as Blob).size;
           break;
-          
+
         case 'background-remove':
           result = await removeBackground(uploadedImage);
           newSize = (result as Blob).size;
           break;
-          
+
         case 'style-transfer':
           result = await applyStyleTransfer(uploadedImage, styleTransferStyle as any);
           newSize = (result as Blob).size;
           break;
-          
+
         case 'enhance':
           result = await autoEnhanceImage(uploadedImage);
           newSize = (result as Blob).size;
           break;
-          
+
         case 'ascii-art':
           result = await generateASCIIArt(uploadedImage, {
             density: asciiDensity[0],
@@ -198,16 +209,16 @@ const AIEnhancer = () => {
             colored: asciiColored
           });
           break;
-          
+
         default:
           throw new Error('Unknown tool');
       }
-      
+
       clearInterval(progressInterval);
       setProcessingProgress(100);
-      
+
       const processingTime = Date.now() - startTime;
-      
+
       // Convert blob to URL for display
       let displayResult: string;
       if (result instanceof Blob) {
@@ -215,7 +226,7 @@ const AIEnhancer = () => {
       } else {
         displayResult = result;
       }
-      
+
       setResults(prev => ({
         ...prev,
         [toolId]: {
@@ -226,7 +237,7 @@ const AIEnhancer = () => {
           newSize
         }
       }));
-      
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Processing failed');
     } finally {
@@ -239,7 +250,7 @@ const AIEnhancer = () => {
   const downloadResult = (toolId: string) => {
     const result = results[toolId];
     if (!result) return;
-    
+
     if (toolId === 'ascii-art') {
       // Download ASCII art as text file
       const blob = new Blob([result.result as string], { type: 'text/plain' });
@@ -299,7 +310,7 @@ const AIEnhancer = () => {
               </span>
             </h1>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              Transform your images with cutting-edge AI tools. Remove backgrounds, enhance quality, 
+              Transform your images with cutting-edge AI tools. Remove backgrounds, enhance quality,
               extract text, and apply artistic effects.
             </p>
           </motion.div>
@@ -321,21 +332,21 @@ const AIEnhancer = () => {
                       onChange={handleFileUpload}
                       className="hidden"
                     />
-                    
+
                     <motion.div
                       whileHover={{ scale: 1.05 }}
                       className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-6"
                     >
                       <Upload className="w-10 h-10 text-white" />
                     </motion.div>
-                    
+
                     <h3 className="text-2xl font-semibold mb-4">
                       Upload Image for AI Processing
                     </h3>
                     <p className="text-gray-600 dark:text-gray-300 mb-8">
                       Upload any image to get started with AI-powered enhancements
                     </p>
-                    
+
                     <Button
                       onClick={() => fileInputRef.current?.click()}
                       size="lg"
@@ -456,13 +467,13 @@ const AIEnhancer = () => {
                                   <div className={`w-12 h-12 bg-gradient-to-br ${tool.color} rounded-xl flex items-center justify-center flex-shrink-0`}>
                                     <Icon className="w-6 h-6 text-white" />
                                   </div>
-                                  
+
                                   <div className="flex-1">
                                     <h3 className="font-semibold text-lg mb-2">{tool.name}</h3>
                                     <p className="text-gray-600 dark:text-gray-300 text-sm mb-3">
                                       {tool.description}
                                     </p>
-                                    
+
                                     <div className="flex flex-wrap gap-1 mb-4">
                                       {tool.features.map((feature) => (
                                         <Badge key={feature} variant="secondary" className="text-xs">
@@ -497,7 +508,7 @@ const AIEnhancer = () => {
                                         </div>
                                       </div>
                                     )}
-                                    
+
                                     <div className="flex gap-2">
                                       <Button
                                         onClick={() => processImage(tool.id)}
@@ -517,7 +528,7 @@ const AIEnhancer = () => {
                                           </>
                                         )}
                                       </Button>
-                                      
+
                                       {hasResult && (
                                         <>
                                           <Button
@@ -670,7 +681,7 @@ const AIEnhancer = () => {
                               <X className="w-4 h-4" />
                             </Button>
                           </div>
-                          
+
                           {toolId === 'ascii-art' ? (
                             <Textarea
                               value={result.result as string}
@@ -740,6 +751,13 @@ const AIEnhancer = () => {
           )}
         </div>
       </div>
+
+      {/* Auth Required Modal */}
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        featureName="AI Enhancement Tools"
+      />
     </Layout>
   );
 };

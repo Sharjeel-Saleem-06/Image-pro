@@ -165,7 +165,7 @@ const HomePage = () => {
             style={{ y: y2, opacity }}
             className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-br from-purple-400/20 via-pink-400/20 to-orange-400/20 rounded-full blur-3xl"
           />
-          
+
           {/* Floating Elements */}
           {[...Array(6)].map((_, i) => (
             <motion.div
@@ -198,16 +198,16 @@ const HomePage = () => {
               <Sparkles className="w-4 h-4 mr-2" />
               100% Free • No Registration Required
             </Badge>
-            
+
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-6 leading-tight">
               Transform Images
               <br />
               <span className="text-3xl md:text-5xl lg:text-6xl">with AI Power</span>
             </h1>
-            
+
             <p className="text-lg md:text-xl lg:text-2xl text-gray-600 dark:text-gray-300 mb-8 max-w-4xl mx-auto leading-relaxed px-4">
-              Professional image processing tools powered by AI. Convert, edit, enhance, and extract text from images - 
-              <span className="font-semibold text-blue-600 dark:text-blue-400"> all in your browser</span>, 
+              Professional image processing tools powered by AI. Convert, edit, enhance, and extract text from images -
+              <span className="font-semibold text-blue-600 dark:text-blue-400"> all in your browser</span>,
               completely free and private.
             </p>
           </motion.div>
@@ -219,8 +219,8 @@ const HomePage = () => {
             className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
           >
             <Link to="/converter">
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
               >
                 <Upload className="w-5 h-5 mr-2" />
@@ -228,9 +228,9 @@ const HomePage = () => {
               </Button>
             </Link>
             <Link to="/about">
-              <Button 
-                variant="outline" 
-                size="lg" 
+              <Button
+                variant="outline"
+                size="lg"
                 className="px-8 py-4 text-lg rounded-xl border-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
               >
                 How it Works
@@ -358,15 +358,15 @@ const HomePage = () => {
                             {tool.stats} used
                           </Badge>
                         </div>
-                        
+
                         <h3 className="text-xl font-bold mb-3 group-hover:text-blue-600 transition-colors">
                           {tool.name}
                         </h3>
-                        
+
                         <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm leading-relaxed">
                           {tool.description}
                         </p>
-                        
+
                         <div className="space-y-2 mb-6">
                           {tool.features.map((feature, idx) => (
                             <div key={idx} className="flex items-center text-sm text-gray-500 dark:text-gray-400">
@@ -375,7 +375,7 @@ const HomePage = () => {
                             </div>
                           ))}
                         </div>
-                        
+
                         <div className="flex items-center text-blue-600 dark:text-blue-400 font-medium group-hover:translate-x-2 transition-transform">
                           <span>Try it now</span>
                           <ArrowRight className="w-4 h-4 ml-2" />
@@ -455,14 +455,14 @@ const HomePage = () => {
                 Ready to Transform Your Images?
               </h2>
               <p className="text-xl mb-8 opacity-90">
-                Join thousands of users who trust ImagePro for their image processing needs. 
+                Join thousands of users who trust ImagePro for their image processing needs.
                 Start processing images instantly - no registration required.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/converter">
-                  <Button 
-                    size="lg" 
-                    variant="secondary" 
+                  <Button
+                    size="lg"
+                    variant="secondary"
                     className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-4 text-lg rounded-xl transform hover:scale-105 transition-all"
                   >
                     <Upload className="w-5 h-5 mr-2" />
@@ -470,10 +470,10 @@ const HomePage = () => {
                   </Button>
                 </Link>
                 <Link to="/about">
-                  <Button 
-                    size="lg" 
-                    variant="outline" 
-                    className="border-white text-white hover:bg-white/10 px-8 py-4 text-lg rounded-xl transition-all"
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="bg-transparent border-white text-white hover:bg-white/20 hover:text-white px-8 py-4 text-lg rounded-xl transition-all"
                   >
                     Learn More
                   </Button>

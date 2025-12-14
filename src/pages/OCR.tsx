@@ -11,9 +11,11 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import Layout from '@/components/Layout';
+import AuthRequiredModal from '@/components/AuthRequiredModal';
+import { useAuthRequired } from '@/hooks/useAuthRequired';
 import { validateImageFile, downloadBlob } from '@/lib/imageUtils';
 import { updateImageProcessed, updateProcessingStats } from '@/lib/statsUtils';
-import Tesseract, { createWorker } from 'tesseract.js';
+import Tesseract, { createWorker, PSM, OEM } from 'tesseract.js';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import {
   Upload,
@@ -91,23 +93,23 @@ const SUPPORTED_LANGUAGES = [
 ];
 
 const QUALITY_MODES = [
-  { 
-    value: 'fast', 
-    label: 'Fast Mode', 
+  {
+    value: 'fast',
+    label: 'Fast Mode',
     description: 'Quick processing with good accuracy',
     icon: Zap,
     color: 'text-yellow-600'
   },
-  { 
-    value: 'balanced', 
-    label: 'Balanced Mode', 
+  {
+    value: 'balanced',
+    label: 'Balanced Mode',
     description: 'Optimal balance of speed and accuracy',
     icon: Gauge,
     color: 'text-blue-600'
   },
-  { 
-    value: 'accurate', 
-    label: 'Accurate Mode', 
+  {
+    value: 'accurate',
+    label: 'Accurate Mode',
     description: 'Maximum accuracy with slower processing',
     icon: Target,
     color: 'text-green-600'
@@ -124,10 +126,14 @@ export default function OCR() {
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<OCRResult | null>(null);
   const [activeTab, setActiveTab] = useState('upload');
+  const [ocrModel, setOcrModel] = useState<'groq' | 'ocrspace'>('groq');
   const [qualityMode, setQualityMode] = useState('balanced');
   const [currentStep, setCurrentStep] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const workerRef = useRef<Tesseract.Worker | null>(null);
+
+  // Auth requirement
+  const { showAuthModal, setShowAuthModal, requireAuth } = useAuthRequired();
   const { toast } = useToast();
   const [stats, setStats] = useState<OCRStats>({
     totalProcessed: 0,
@@ -137,32 +143,15 @@ export default function OCR() {
   });
 
   // Initialize worker once
+  // Cleanup worker on unmount
   useEffect(() => {
-    const initWorker = async () => {
-      try {
-        if (!workerRef.current) {
-          workerRef.current = await createWorker();
-          console.log('OCR Worker initialized successfully');
-        }
-      } catch (error) {
-        console.error('Failed to initialize OCR worker:', error);
-        toast({
-          title: "Initialization Error",
-          description: "Failed to initialize OCR engine. Please refresh the page.",
-          variant: "destructive"
-        });
-      }
-    };
-
-    initWorker();
-
     return () => {
       if (workerRef.current) {
         workerRef.current.terminate();
         workerRef.current = null;
       }
     };
-  }, [toast]);
+  }, []);
 
   // Load stats from localStorage
   useEffect(() => {
@@ -189,27 +178,10 @@ export default function OCR() {
     });
   }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  }, []);
-
-  const handleDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    if (droppedFiles.length > 0) {
-      handleFileSelect(droppedFiles[0]);
-    }
-  }, []);
-
   const handleFileSelect = useCallback((file: File) => {
+    // Check if user is authenticated
+    if (!requireAuth()) return;
+
     if (!file.type.startsWith('image/')) {
       toast({
         title: "Invalid File Type",
@@ -234,7 +206,7 @@ export default function OCR() {
     setResult(null);
     setProgress(0);
     setCurrentStep('');
-    
+
     // Add to files array
     const newFile: OCRResult = {
       id: `${Date.now()}-${Math.random()}`,
@@ -244,7 +216,7 @@ export default function OCR() {
       progress: 0,
       language: defaultLanguage
     };
-    
+
     setFiles(prev => {
       const filtered = prev.filter(f => !(f.file.name === file.name && f.file.size === file.size));
       return [...filtered, newFile];
@@ -254,7 +226,30 @@ export default function OCR() {
       title: "File Selected",
       description: `${file.name} is ready for OCR processing`
     });
-  }, [defaultLanguage, toast]);
+  }, [defaultLanguage, toast, requireAuth]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    // Check if user is authenticated
+    if (!requireAuth()) return;
+
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    if (droppedFiles.length > 0) {
+      handleFileSelect(droppedFiles[0]);
+    }
+  }, [requireAuth, handleFileSelect]);
 
   const processOCR = useCallback(async () => {
     if (!selectedFile || isProcessing) return;
@@ -262,79 +257,159 @@ export default function OCR() {
     setIsProcessing(true);
     setProgress(0);
     setActiveTab('results');
-    
+
     const startTime = Date.now();
     const fileId = `${selectedFile.name}-${selectedFile.size}`;
 
+    // API Keys from env
+    const groqKeys = [
+      import.meta.env.VITE_GROQ_API_KEY,
+      import.meta.env.VITE_GROQ_API_KEY_2
+    ].filter(Boolean); // Filter out undefined keys
+
+    const ocrSpaceApiKey = import.meta.env.VITE_OCR_SPACE_API_KEY || 'K82021121088957';
+
     try {
       // Update file status
-      setFiles(prev => prev.map(f => 
+      setFiles(prev => prev.map(f =>
         f.file.name === selectedFile.name && f.file.size === selectedFile.size
           ? { ...f, status: 'processing' as const, progress: 0 }
           : f
       ));
 
-      // Step 1: Initialize worker
-      setCurrentStep('Initializing OCR engine...');
-      setProgress(5);
-      
-      if (!workerRef.current) {
-        workerRef.current = await createWorker();
-      }
-      
-      const worker = workerRef.current;
+      let extractedData: { text: string; confidence: number; processingTime?: number } | null = null;
+      let usedModel = '';
 
-      // Step 2: Load language
-      setCurrentStep(`Loading ${SUPPORTED_LANGUAGES.find(l => l.code === defaultLanguage)?.name || defaultLanguage} language model...`);
-      setProgress(15);
-      
-      await worker.loadLanguage(defaultLanguage);
-      setProgress(25);
-      
-      await worker.initialize(defaultLanguage);
-      setProgress(35);
+      // FORCE AI ONLY - NO LOCAL FALLBACK 
 
-      // Step 3: Configure OCR parameters
-      setCurrentStep('Configuring OCR parameters...');
-      setProgress(40);
-      
-      await worker.setParameters({
-        tessedit_pageseg_mode: '1', // Automatic page segmentation with OSD
-        tessedit_ocr_engine_mode: '1', // Neural nets LSTM engine only
-        preserve_interword_spaces: '1',
-        tessedit_char_whitelist: '', // Allow all characters
-        tessedit_do_invert: '0'
-      });
+      // 1. Try Groq (Key 1 -> Key 2)
+      if (ocrModel === 'groq') {
+        const { extractTextWithGroq } = await import('@/lib/ocrGroq');
+        const langName = SUPPORTED_LANGUAGES.find(l => l.code === defaultLanguage)?.name || defaultLanguage;
 
-      // Step 4: Process image
-      setCurrentStep('Analyzing image and extracting text...');
-      setProgress(50);
+        for (let i = 0; i < groqKeys.length; i++) {
+          const currentKey = groqKeys[i];
+          const keyLabel = i === 0 ? "Primary" : "Backup";
 
-      const { data } = await worker.recognize(selectedFile, {
-        logger: (m) => {
-          if (m.status === 'recognizing text') {
-            const ocrProgress = 50 + (m.progress * 45); // 50% to 95%
-            setProgress(ocrProgress);
-            setCurrentStep(`Extracting text... ${Math.round(m.progress * 100)}%`);
+          try {
+            setCurrentStep(qualityMode === 'accurate'
+              ? `Initializing AI Vision (${keyLabel} Connection)...`
+              : `Initializing AI Vision (${keyLabel})...`);
+
+            setProgress(20 + (i * 10)); // Increment progress for second try
+
+            const aiResult = await extractTextWithGroq(
+              selectedFile,
+              qualityMode as 'fast' | 'balanced' | 'accurate',
+              currentKey,
+              (stage) => {
+                setCurrentStep(stage);
+                setProgress(prev => Math.min(prev + 10, 90));
+              },
+              langName
+            );
+
+            extractedData = {
+              text: aiResult.text,
+              confidence: aiResult.confidence,
+              processingTime: aiResult.processingTime
+            };
+            usedModel = `AI Vision (${qualityMode})`;
+            break; // Success! Exit loop
+
+          } catch (groqError) {
+            console.warn(`Groq API Key ${i + 1} failed:`, groqError);
+            if (i === groqKeys.length - 1) {
+              // Both keys failed, do NOT throw yet, fallthrough to OCR.Space logic below
+              console.log("All Groq keys failed, switching to backup provider...");
+            }
           }
         }
-      });
+      }
 
-      // Step 5: Process results
-      setCurrentStep('Processing results...');
-      setProgress(95);
+      // 2. Fallback to OCR.Space (if Groq failed OR if user selected 'ocrspace')
+      if (!extractedData) {
+        if (ocrModel === 'groq') {
+          setCurrentStep('AI Vision unavailable, switching to Cloud Backup...');
+          await new Promise(r => setTimeout(r, 1000)); // Brief pause for UX
+        }
 
-      const processingTime = Date.now() - startTime;
-      
-      // Process line-level data with better error handling
-      const lines = data.lines?.map(line => ({
-        text: line.text || '',
-        confidence: line.confidence || 0,
-        bbox: line.bbox || { x0: 0, y0: 0, x1: 0, y1: 0 }
-      })) || [];
+        // --- MODEL 2: OCR.SPACE ---
+        try {
+          let fileToUpload = selectedFile;
 
-      // Count words more accurately
-      const wordCount = data.text ? data.text.trim().split(/\s+/).filter(word => word.length > 0).length : 0;
+          // OCR.Space Free Tier Limit: 1 MB
+          if (fileToUpload.size > 1024 * 1024) {
+            setCurrentStep('Optimizing image for Cloud (Limit 1MB)...');
+            setProgress(10);
+
+            const { compressImage } = await import('@/lib/imageUtils');
+            try {
+              fileToUpload = await compressImage(selectedFile, {
+                maxSizeMB: 0.95, // Target just under 1MB
+                maxWidthOrHeight: 2048,
+                useWebWorker: true,
+                quality: 80
+              });
+              console.log(`Image compressed from ${(selectedFile.size / 1024).toFixed(2)}KB to ${(fileToUpload.size / 1024).toFixed(2)}KB`);
+            } catch (cError) {
+              console.warn("Compression failed, trying original:", cError);
+            }
+          }
+
+          setCurrentStep('Uploading to OCR.Space Cloud...');
+          setProgress(20);
+
+          const formData = new FormData();
+          formData.append('file', fileToUpload);
+          formData.append('apikey', ocrSpaceApiKey);
+          formData.append('language', defaultLanguage);
+          formData.append('isOverlayRequired', 'false');
+          formData.append('detectOrientation', 'true');
+          formData.append('scale', 'true');
+          formData.append('OCREngine', qualityMode === 'accurate' ? '2' : '1'); // Engine 2 is better
+
+          const response = await fetch('https://api.ocr.space/parse/image', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+
+          setCurrentStep('Processing Cloud Response...');
+          setProgress(70);
+
+          const data = await response.json();
+
+          if (data.IsErroredOnProcessing) {
+            throw new Error(typeof data.ErrorMessage === 'string' ? data.ErrorMessage : data.ErrorMessage?.[0] || 'Unknown OCR.Space error');
+          }
+
+          if (!data.ParsedResults || data.ParsedResults.length === 0) {
+            throw new Error('No results returned from OCR service');
+          }
+
+          const parsedResult = data.ParsedResults[0];
+          extractedData = {
+            text: parsedResult.ParsedText,
+            confidence: 90, // OCR.Space doesn't always return confidence for text block, assume high
+            processingTime: Date.now() - startTime
+          };
+          usedModel = 'OCR.Space (Cloud)';
+
+        } catch (error) {
+          console.error("OCR.Space Failed:", error);
+          // NO LOCAL FALLBACK - User requested disable
+          throw new Error("All AI and Cloud OCR services failed. Please check your internet connection or try again later.");
+        }
+      }
+
+      if (!extractedData) throw new Error("No text extracted.");
+
+      setCurrentStep('Finalizing results...');
+      setProgress(100);
+
+      const wordCount = extractedData.text ? extractedData.text.trim().split(/\s+/).filter(word => word.length > 0).length : 0;
 
       const completedResult: OCRResult = {
         id: fileId,
@@ -343,69 +418,62 @@ export default function OCR() {
         status: 'completed',
         progress: 100,
         language: defaultLanguage,
-        text: data.text || '',
-        confidence: data.confidence || 0,
-        lines,
-        processingTime,
+        text: extractedData.text,
+        confidence: extractedData.confidence,
+        lines: [],
+        processingTime: extractedData.processingTime || (Date.now() - startTime),
         wordCount
       };
 
-      // Update files array
-      setFiles(prev => prev.map(f => 
+      setFiles(prev => prev.map(f =>
         f.file.name === selectedFile.name && f.file.size === selectedFile.size
           ? completedResult
           : f
       ));
-      
+
       setResult(completedResult);
-      setProgress(100);
-      setCurrentStep('Text extraction completed!');
-      
-      // Update stats
+      setCurrentStep('Extraction completed!');
       updateStats(completedResult);
       updateImageProcessed();
-      updateProcessingStats('ocr', processingTime);
+      updateProcessingStats('ocrExtractions');
 
       toast({
-        title: "OCR Complete! 🎉",
-        description: `Text extracted with ${Math.round(data.confidence)}% confidence in ${(processingTime / 1000).toFixed(1)}s`
+        title: "Extraction Complete! ✨",
+        description: `Processed using ${usedModel}`,
+        duration: 5000,
       });
 
     } catch (error) {
       console.error('OCR processing failed:', error);
-      
       const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
-      
-      setFiles(prev => prev.map(f => 
+      setFiles(prev => prev.map(f =>
         f.file.name === selectedFile.name && f.file.size === selectedFile.size
           ? { ...f, status: 'error' as const, progress: 0, error: errorMessage }
           : f
       ));
-      
       setProgress(0);
       setCurrentStep('');
-      
       toast({
-        title: "OCR Failed",
+        title: "Extraction Failed",
         description: errorMessage,
         variant: "destructive"
       });
     } finally {
       setIsProcessing(false);
     }
-  }, [selectedFile, defaultLanguage, previewUrl, isProcessing, updateStats, toast]);
+  }, [selectedFile, defaultLanguage, previewUrl, isProcessing, updateStats, qualityMode, toast, ocrModel]);
 
   const copyToClipboard = useCallback(async () => {
     if (!result?.text) return;
 
-      try {
+    try {
       await navigator.clipboard.writeText(result.text);
-        toast({
+      toast({
         title: "Copied! 📋",
         description: "Text has been copied to your clipboard"
-        });
-      } catch (error) {
-        toast({
+      });
+    } catch (error) {
+      toast({
         title: "Copy Failed",
         description: "Failed to copy text to clipboard",
         variant: "destructive"
@@ -529,68 +597,35 @@ export default function OCR() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900/50 pb-12">
         <div className="container mx-auto px-4 py-8 max-w-7xl">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-12"
+            className="mb-10 text-center space-y-4"
           >
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full mb-6">
-              <FileText className="w-10 h-10 text-white" />
-            </div>
-            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-4">
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
               OCR Text Extractor
             </h1>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">
-              Extract text from images with advanced AI-powered OCR technology. Support for 16+ languages with industry-leading accuracy.
+            <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              Convert images to text instantly with AI-powered accuracy.
             </p>
-            
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
-              {[
-                { label: 'Languages', value: '16+', icon: Languages, color: 'from-purple-500 to-purple-600' },
-                { label: 'Accuracy', value: '99%+', icon: Target, color: 'from-green-500 to-green-600' },
-                { label: 'Speed', value: '<5s', icon: Clock, color: 'from-blue-500 to-blue-600' },
-                { label: 'Formats', value: '3', icon: FileText, color: 'from-orange-500 to-orange-600' }
-              ].map((stat, index) => {
-                const Icon = stat.icon;
-                return (
-                  <motion.div
-                    key={stat.label}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-xl p-6 border border-gray-200/50 dark:border-gray-700/50"
-                  >
-                    <div className={`inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r ${stat.color} rounded-lg mb-3`}>
-                      <Icon className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</div>
-                  </motion.div>
-                );
-              })}
-            </div>
           </motion.div>
 
-          {/* Main Content */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Panel - Upload & Settings */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Left Sidebar (Settings & Upload) */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="lg:col-span-1 space-y-6"
+              className="lg:col-span-4 space-y-6 lg:sticky lg:top-8"
             >
               {/* Upload Card */}
-              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-gray-200/50 dark:border-gray-700/50">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg">
-                      <Upload className="w-5 h-5 text-white" />
-                    </div>
-                    Upload Image
+              <Card className="border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    <Upload className="w-5 h-5 text-purple-500" />
+                    Input Image
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -598,11 +633,15 @@ export default function OCR() {
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
-                      isDragging
+                    className={`
+                      relative group border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200
+                      ${isDragging
                         ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-                        : 'border-gray-300 dark:border-gray-600 hover:border-purple-400 dark:hover:border-purple-500'
-                    }`}
+                        : 'border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                      }
+                      ${selectedFile ? 'py-4' : 'py-10'}
+                    `}
+                    onClick={() => !selectedFile && fileInputRef.current?.click()}
                   >
                     <input
                       ref={fileInputRef}
@@ -611,124 +650,130 @@ export default function OCR() {
                       onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
                       className="hidden"
                     />
-                    
+
                     {selectedFile ? (
-                      <div className="space-y-4">
-                        <div className="w-16 h-16 mx-auto bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
-                          <CheckCircle className="w-8 h-8 text-white" />
+                      <div className="flex items-center gap-4 text-left">
+                        <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
+                          <FileImage className="w-6 h-6 text-purple-600" />
                         </div>
-                        <div>
-                          <p className="font-medium text-gray-900 dark:text-white">{selectedFile.name}</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate text-gray-900 dark:text-white">
+                            {selectedFile.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
                             {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                           </p>
                         </div>
                         <Button
-                          onClick={() => fileInputRef.current?.click()}
-                          variant="outline"
-                          size="sm"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-500 hover:text-red-500"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            fileInputRef.current?.click();
+                          }}
                         >
-                          Change Image
+                          <RotateCcw className="w-4 h-4" />
                         </Button>
                       </div>
                     ) : (
-                      <div className="space-y-4">
-                        <div className="w-16 h-16 mx-auto bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-                          <ImageIcon className="w-8 h-8 text-white" />
+                      <div className="cursor-pointer">
+                        <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                          <ImageIcon className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                         </div>
-                        <div>
-                          <p className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                            Drop your image here
-                          </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                            or click to browse files
-                          </p>
-                          <Button
-                            onClick={() => fileInputRef.current?.click()}
-                            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-                          >
-                            <Upload className="w-4 h-4 mr-2" />
-                            Choose Image
-                          </Button>
-                        </div>
+                        <p className="font-medium text-gray-900 dark:text-white mb-1">
+                          Click to upload
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          or drag and drop here
+                        </p>
                       </div>
                     )}
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Settings Card */}
-              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-gray-200/50 dark:border-gray-700/50">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg">
-                      <Settings className="w-5 h-5 text-white" />
-                    </div>
-                    OCR Settings
+              {/* OCR Controls */}
+              <Card className="border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    <Settings className="w-5 h-5 text-blue-500" />
+                    Configuration
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Language Selection */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                      Language
+                  {/* Model Selector */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      OCR Engine
+                    </label>
+                    <Select value={ocrModel} onValueChange={(val: 'groq' | 'ocrspace') => setOcrModel(val)}>
+                      <SelectTrigger className="w-full bg-white dark:bg-gray-900">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="groq">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-purple-500" />
+                            <span>AI Vision (Groq)</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="ocrspace">
+                          <div className="flex items-center gap-2">
+                            <Globe className="w-4 h-4 text-blue-500" />
+                            <span>OCR.Space (Cloud)</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Language */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Target Language
                     </label>
                     <Select value={defaultLanguage} onValueChange={setDefaultLanguage}>
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="w-full bg-white dark:bg-gray-900">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {SUPPORTED_LANGUAGES.map((lang) => (
                           <SelectItem key={lang.code} value={lang.code}>
-                            <div className="flex items-center gap-3">
-                              <span className="text-lg">{lang.flag}</span>
-                              <div>
-                                <div className="font-medium">{lang.name}</div>
-                                <div className="text-xs text-gray-500">~{lang.accuracy}% accuracy</div>
-                              </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-base">{lang.flag}</span>
+                              <span>{lang.name}</span>
                             </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    {selectedLanguageInfo && (
-                      <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="text-lg">{selectedLanguageInfo.flag}</span>
-                          <span className="font-medium">{selectedLanguageInfo.name}</span>
-                          <Badge variant="secondary">~{selectedLanguageInfo.accuracy}% accuracy</Badge>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
-                  {/* Quality Mode */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                      Quality Mode
+                  {/* Mode Grid */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Processing Mode
                     </label>
-                    <div className="grid gap-3">
+                    <div className="grid grid-cols-3 gap-2">
                       {QUALITY_MODES.map((mode) => {
                         const Icon = mode.icon;
+                        const isSelected = qualityMode === mode.value;
                         return (
                           <div
                             key={mode.value}
                             onClick={() => setQualityMode(mode.value)}
-                            className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                              qualityMode === mode.value
-                                ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-                                : 'border-gray-200 dark:border-gray-700 hover:border-purple-300'
-                            }`}
+                            className={`
+                              cursor-pointer rounded-lg p-2 text-center border-2 transition-all duration-200
+                              ${isSelected
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                : 'border-transparent bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
+                              }
+                            `}
                           >
-                            <div className="flex items-center gap-3">
-                              <Icon className={`w-5 h-5 ${mode.color}`} />
-                              <div className="flex-1">
-                                <div className="font-medium text-gray-900 dark:text-white">{mode.label}</div>
-                                <div className="text-sm text-gray-500 dark:text-gray-400">{mode.description}</div>
-                              </div>
-                              {qualityMode === mode.value && (
-                                <CheckCircle className="w-5 h-5 text-purple-600" />
-                              )}
+                            <Icon className={`w-5 h-5 mx-auto mb-1 ${isSelected ? 'text-blue-600' : 'text-gray-500'}`} />
+                            <div className={`text-xs font-medium ${isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'}`}>
+                              {mode.label.split(' ')[0]}
                             </div>
                           </div>
                         );
@@ -736,250 +781,169 @@ export default function OCR() {
                     </div>
                   </div>
 
-                  {/* Process Button */}
+                  {/* Extract Button */}
                   <Button
                     onClick={processOCR}
                     disabled={!selectedFile || isProcessing}
-                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 h-12"
+                    className="w-full h-12 text-base font-semibold bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all"
                   >
                     {isProcessing ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Processing...
-                      </>
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Processing...</span>
+                      </div>
                     ) : (
-                    <>
-                        <Sparkles className="w-5 h-5 mr-2" />
-                        Extract Text
-                      </>
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-5 h-5" />
+                        <span>Start Extraction</span>
+                      </div>
                     )}
                   </Button>
                 </CardContent>
               </Card>
 
-              {/* Stats Card */}
-              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-gray-200/50 dark:border-gray-700/50">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg">
-                      <BarChart3 className="w-5 h-5 text-white" />
-                    </div>
-                    Statistics
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                      <div className="text-2xl font-bold text-purple-600">{stats.totalProcessed}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Images Processed</div>
-                    </div>
-                    <div className="text-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                      <div className="text-2xl font-bold text-blue-600">{Math.round(stats.averageAccuracy)}%</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Avg Accuracy</div>
-                    </div>
-                    <div className="text-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">{(stats.totalProcessingTime / 1000).toFixed(1)}s</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Total Time</div>
-                    </div>
-                    <div className="text-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                      <div className="text-2xl font-bold text-orange-600">{stats.languagesUsed.length}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Languages Used</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Mini Stats (Processed) */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm text-center">
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalProcessed}</div>
+                  <div className="text-xs text-gray-500 font-medium uppercase tracking-wide">Processed</div>
+                </div>
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm text-center">
+                  <div className="text-2xl font-bold text-blue-600">{Math.round(stats.averageAccuracy)}%</div>
+                  <div className="text-xs text-gray-500 font-medium uppercase tracking-wide">Accuracy</div>
+                </div>
+              </div>
+
             </motion.div>
 
-            {/* Right Panel - Preview & Results */}
+            {/* Right Main Area (Results) */}
             <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="lg:col-span-2 space-y-6"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="lg:col-span-8 h-full flex flex-col"
             >
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg">
-                  <TabsTrigger value="upload" className="flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4" />
-                    Preview
-                  </TabsTrigger>
-                  <TabsTrigger value="results" className="flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    Results
-                  </TabsTrigger>
-                </TabsList>
+              <Card className="flex-1 flex flex-col border-gray-200/50 dark:border-gray-700/50 shadow-md min-h-[600px]">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full w-full">
+                  <div className="p-2 bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700">
+                    <TabsList className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-1 rounded-lg">
+                      <TabsTrigger value="upload" className="px-4 py-2 text-sm">Preview Input</TabsTrigger>
+                      <TabsTrigger value="results" className="px-4 py-2 text-sm">Extraction Results</TabsTrigger>
+                    </TabsList>
+                  </div>
 
-                <TabsContent value="upload" className="mt-6">
-                  <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-gray-200/50 dark:border-gray-700/50">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-3">
-                        <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg">
-                          <Eye className="w-5 h-5 text-white" />
-                        </div>
-                        Image Preview
-                  </CardTitle>
-                </CardHeader>
-                    <CardContent>
+                  <div className="flex-1 p-6 relative bg-white dark:bg-gray-900/50">
+                    <TabsContent value="upload" className="h-full m-0">
                       {previewUrl ? (
-                        <div className="relative">
-                          <img
-                            src={previewUrl}
-                            alt="Preview"
-                            className="w-full h-auto max-h-96 object-contain rounded-lg border border-gray-200 dark:border-gray-700"
-                          />
-                          <div className="absolute top-4 right-4">
-                            <Badge className="bg-white/90 text-gray-900">
-                              {selectedFile?.name}
-                        </Badge>
-                      </div>
+                        <div className="h-full flex items-center justify-center bg-gray-50/50 dark:bg-gray-900 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 p-4">
+                          <img src={previewUrl} alt="Preview" className="max-w-full max-h-[500px] object-contain shadow-sm rounded-lg" />
                         </div>
                       ) : (
-                        <div className="h-96 flex items-center justify-center bg-gray-50 dark:bg-gray-700/50 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
-                          <div className="text-center">
-                            <ImageIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                            <p className="text-gray-500 dark:text-gray-400">No image selected</p>
-                          </div>
+                        <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                          <ImageIcon className="w-16 h-16 mb-4 opacity-20" />
+                          <p>No image to preview</p>
                         </div>
                       )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+                    </TabsContent>
 
-                <TabsContent value="results" className="mt-6">
-                  <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-gray-200/50 dark:border-gray-700/50">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-3">
-                        <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg">
-                          <FileText className="w-5 h-5 text-white" />
-                        </div>
-                        Extraction Results
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                    <TabsContent value="results" className="h-full m-0 flex flex-col">
                       {isProcessing ? (
-                        <div className="space-y-6">
-                          <div className="text-center">
-                            <div className="w-16 h-16 mx-auto bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center mb-4">
-                              <Loader2 className="w-8 h-8 text-white animate-spin" />
+                        <div className="h-full flex flex-col items-center justify-center space-y-6">
+                          <div className="relative">
+                            <div className="w-20 h-20 rounded-full border-4 border-gray-100 dark:border-gray-800 border-t-purple-600 animate-spin" />
+                            <div className="absolute inset-0 flex items-center justify-center font-bold text-xs">
+                              {Math.round(progress)}%
                             </div>
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                              Processing Image...
-                            </h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                              {currentStep || 'Preparing OCR engine...'}
-                            </p>
                           </div>
-                          
-                          <div className="space-y-3">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">Progress</span>
-                              <span className="font-medium text-gray-900 dark:text-white">{Math.round(progress)}%</span>
-                            </div>
-                            <Progress value={progress} className="h-3" />
+                          <div className="text-center space-y-2">
+                            <h3 className="text-lg font-medium">{currentStep}</h3>
+                            <p className="text-sm text-gray-500">This usually takes 2-5 seconds...</p>
                           </div>
                         </div>
                       ) : result ? (
-                        <div className="space-y-6">
-                          {/* Result Stats */}
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="text-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg">
-                              <Target className="w-6 h-6 text-green-600 mx-auto mb-2" />
-                              <div className="text-lg font-bold text-green-600">{Math.round(result.confidence || 0)}%</div>
-                              <div className="text-xs text-gray-600 dark:text-gray-400">Confidence</div>
-                            </div>
-                            <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg">
-                              <Clock className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-                              <div className="text-lg font-bold text-blue-600">{(result.processingTime || 0).toFixed(1)}s</div>
-                              <div className="text-xs text-gray-600 dark:text-gray-400">Time</div>
-                            </div>
-                            <div className="text-center p-4 bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-lg">
-                              <BookOpen className="w-6 h-6 text-purple-600 mx-auto mb-2" />
-                              <div className="text-lg font-bold text-purple-600">{result.wordCount || 0}</div>
-                              <div className="text-xs text-gray-600 dark:text-gray-400">Words</div>
-                            </div>
-                            <div className="text-center p-4 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-lg">
-                              <Languages className="w-6 h-6 text-orange-600 mx-auto mb-2" />
-                              <div className="text-lg font-bold text-orange-600">{SUPPORTED_LANGUAGES.find(l => l.code === result.language)?.flag || '🌐'}</div>
-                              <div className="text-xs text-gray-600 dark:text-gray-400">{SUPPORTED_LANGUAGES.find(l => l.code === result.language)?.name || result.language}</div>
-                            </div>
-                          </div>
-
-                          {/* Extracted Text */}
-                          <div>
-                            <div className="flex items-center justify-between mb-4">
-                              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Extracted Text</h3>
-                              <div className="flex gap-2">
-                                <Button
-                                  onClick={copyToClipboard}
-                                  variant="outline"
-                                  size="sm"
-                                >
-                                  <Copy className="w-4 h-4 mr-2" />
-                          Copy
-                        </Button>
+                        <div className="flex flex-col h-full gap-4">
+                          {/* Metrics Bar */}
+                          <div className="flex flex-wrap items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-lg border border-gray-100 dark:border-gray-700">
+                            <div className="flex items-center gap-2 px-3 border-r border-gray-200 dark:border-gray-600 last:border-0">
+                              <Target className="w-4 h-4 text-green-500" />
+                              <div>
+                                <span className="text-xs text-gray-500 uppercase block">Confidence</span>
+                                <span className="font-semibold text-sm">{Math.round(result.confidence || 0)}%</span>
                               </div>
                             </div>
-                            <Textarea
-                              value={result.text || ''}
-                              readOnly
-                              className="min-h-[200px] bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600"
-                              placeholder="Extracted text will appear here..."
-                            />
+                            <div className="flex items-center gap-2 px-3 border-r border-gray-200 dark:border-gray-600 last:border-0">
+                              <Clock className="w-4 h-4 text-blue-500" />
+                              <div>
+                                <span className="text-xs text-gray-500 uppercase block">Time</span>
+                                <span className="font-semibold text-sm">{(result.processingTime || 0).toFixed(2)}s</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 px-3">
+                              <BookOpen className="w-4 h-4 text-purple-500" />
+                              <div>
+                                <span className="text-xs text-gray-500 uppercase block">Words</span>
+                                <span className="font-semibold text-sm">{result.wordCount}</span>
+                              </div>
+                            </div>
+
+                            <div className="flex-1" />
+
+                            {/* Quick Actions */}
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm" onClick={copyToClipboard} className="h-8">
+                                <Copy className="w-3.5 h-3.5 mr-2" />
+                                Copy
+                              </Button>
+                            </div>
                           </div>
 
-                          {/* Download Options */}
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Download Options</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                              <Button
-                                onClick={() => downloadText('txt')}
-                                variant="outline"
-                                className="h-12"
-                              >
-                                <FileText className="w-5 h-5 mr-2" />
-                                Download TXT
+                          {/* Editor Area */}
+                          <div className="relative flex-1 group">
+                            <Textarea
+                              value={result.text}
+                              readOnly
+                              className="h-full min-h-[400px] w-full resize-none bg-white dark:bg-gray-950 p-6 font-mono text-sm leading-relaxed border-gray-200 dark:border-gray-800 focus:ring-0 focus:border-purple-500 rounded-lg shadow-inner"
+                            />
+
+                            {/* Floating Download Actions (Bottom Right) */}
+                            <div className="absolute bottom-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button size="sm" variant="secondary" onClick={() => downloadText('txt')} className="shadow-lg">
+                                <FileText className="w-3 h-3 mr-2" /> TXT
                               </Button>
-                              <Button
-                                onClick={() => downloadText('docx')}
-                                variant="outline"
-                                className="h-12"
-                              >
-                                <Archive className="w-5 h-5 mr-2" />
-                                Download DOCX
+                              <Button size="sm" variant="secondary" onClick={() => downloadText('docx')} className="shadow-lg">
+                                <Archive className="w-3 h-3 mr-2" /> DOCX
                               </Button>
-                              <Button
-                                onClick={() => downloadText('json')}
-                                variant="outline"
-                                className="h-12"
-                              >
-                                <Cpu className="w-5 h-5 mr-2" />
-                                Download JSON
-                        </Button>
-                      </div>
+                              <Button size="sm" variant="secondary" onClick={() => downloadText('json')} className="shadow-lg">
+                                <Cpu className="w-3 h-3 mr-2" /> JSON
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       ) : (
-                        <div className="h-96 flex items-center justify-center">
-                          <div className="text-center">
-                            <div className="w-16 h-16 mx-auto bg-gradient-to-r from-gray-400 to-gray-500 rounded-full flex items-center justify-center mb-4">
-                              <FileText className="w-8 h-8 text-white" />
-                            </div>
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                              No Results Yet
-                            </h3>
-                            <p className="text-gray-600 dark:text-gray-400">
-                              Upload an image and click "Extract Text" to see results here
-                            </p>
+                        <div className="h-full flex flex-col items-center justify-center text-center p-8 text-gray-400 gap-4 opacity-60">
+                          <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
+                            <Zap className="w-10 h-10 text-gray-300 dark:text-gray-600" />
                           </div>
-                    </div>
+                          <div className="max-w-xs">
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Ready to Extract</h3>
+                            <p>Upload an image and configure settings to see the magic happen.</p>
+                          </div>
+                        </div>
                       )}
-                </CardContent>
+                    </TabsContent>
+                  </div>
+                </Tabs>
               </Card>
-                </TabsContent>
-              </Tabs>
             </motion.div>
           </div>
         </div>
       </div>
+
+      {/* Auth Required Modal */}
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        featureName="OCR Text Extractor"
+      />
     </Layout>
   );
 }
