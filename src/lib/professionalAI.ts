@@ -410,15 +410,15 @@ export const smartUpscale = async (
 export const processImageWithGradioSpace = async (
     file: File,
     options: {
-        faceModel?: string,
-        upscaleModel?: string,
+        faceModel?: string | null,
+        upscaleModel?: string | null,
         upscale?: number,
         fidelity?: number
     }
 ): Promise<Blob> => {
     const {
         faceModel = "CodeFormer.pth",
-        upscaleModel = "None",
+        upscaleModel = null,  // Use null instead of "None" for Gradio dropdown
         upscale = 2,
     } = options;
 
@@ -428,38 +428,18 @@ export const processImageWithGradioSpace = async (
         const client = await Client.connect("sharry121/ImagePro");
         const spaceUrl = "https://sharry121-imagepro.hf.space";
 
-        console.log('✅ Connected. Uploading file...');
+        console.log('✅ Connected. Sending image directly...');
         
-        // Upload the file first using upload_files to get proper file reference
-        const uploadResponse = await client.upload_files(spaceUrl, [file]);
-        console.log('✅ File uploaded:', uploadResponse);
-
-        // Extract the uploaded file path
-        const uploadedFilePath = uploadResponse.files?.[0];
-        if (!uploadedFilePath) {
-            throw new Error("File upload failed - no file reference returned");
-        }
-
-        // Gradio 5.x Gallery expects GalleryImage format: {image: {path: string, ...}}
-        // We need to wrap the uploaded file path in the correct structure
-        const galleryImage = {
-            image: {
-                path: uploadedFilePath,
-                url: `${spaceUrl}/file=${uploadedFilePath}`,
-                orig_name: file.name,
-                size: file.size,
-                mime_type: file.type
-            }
-        };
-
-        console.log('✅ Sending image for processing...', galleryImage);
+        // For Gradio 5.x, pass the File/Blob directly - Gradio client handles the upload
+        // The Gallery component accepts an array of files directly
+        console.log('✅ Sending image for processing...');
         
-        // Use predict() with the properly formatted GalleryImage
+        // Use predict() with the file directly - Gradio client will handle upload
         const result = await client.predict("/inference", [
-            [galleryImage],              // 0: input_gallery - array of GalleryImage objects
-            faceModel,                   // 1: face_model
-            upscaleModel,                // 2: upscale_model  
-            upscale,                     // 3: upscale
+            [file],                      // 0: input_gallery - array of File objects (Gradio handles conversion)
+            faceModel,                   // 1: face_model (string or null)
+            upscaleModel,                // 2: upscale_model (null for no upscaling, or model name string)
+            upscale,                     // 3: upscale scale factor
             "retinaface_resnet50",       // 4: face_detection
             10,                          // 5: face_detection_threshold
             false,                       // 6: face_detection_only_center
@@ -511,7 +491,7 @@ export const smartFaceRestore = async (
         console.log('Trying Hugging Face Space for face restore...');
         return await processImageWithGradioSpace(file, {
             faceModel: "CodeFormer.pth",
-            upscaleModel: "None", // Focus on face
+            upscaleModel: null, // null = no upscaling, focus on face restoration only
             upscale
         });
     } catch (e: any) {
