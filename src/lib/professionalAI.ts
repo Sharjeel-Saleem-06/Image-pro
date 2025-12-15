@@ -497,7 +497,17 @@ export const processImageWithGradioSpace = async (
         const data = result.data as any[];
         if (data && data[0]) {
             const gallery = data[0];
-            const output = Array.isArray(gallery) ? gallery[0] : gallery;
+            
+            // Gradio returns multiple images in the gallery (different processing stages/versions)
+            // We want the LAST/BEST quality image (usually the final processed result)
+            let output;
+            if (Array.isArray(gallery) && gallery.length > 0) {
+                // Take the last image in the gallery (best quality/final result)
+                output = gallery[gallery.length - 1];
+                console.log(`✅ Gallery has ${gallery.length} images, selecting the last one (best quality)`);
+            } else {
+                output = gallery;
+            }
             
             let url: string;
             if (typeof output === 'string') {
