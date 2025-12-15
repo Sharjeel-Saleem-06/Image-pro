@@ -428,50 +428,43 @@ export const processImageWithGradioSpace = async (
     try {
         const client = await Client.connect("sharry121/ImagePro");
 
-        // Get the Space's API info to understand the correct endpoint
         console.log('✅ Connected. Checking API...');
         
-        // Convert file to blob for Gradio
-        const imageBlob = new Blob([await file.arrayBuffer()], { type: file.type });
+        // Upload the file first using upload_files to get proper file reference
+        // This returns an UploadResponse with files array
+        const spaceUrl = "https://sharry121-imagepro.hf.space";
+        const uploadResponse = await client.upload_files(spaceUrl, [file]);
+        console.log('✅ File uploaded:', uploadResponse);
+
+        // Extract the uploaded file path/reference
+        const uploadedFile = uploadResponse.files?.[0];
+        if (!uploadedFile) {
+            throw new Error("File upload failed - no file reference returned");
+        }
 
         console.log('✅ Sending image for processing...');
         
-        // Use submit() instead of predict() to handle streaming responses properly
-        const job = client.submit("/inference", {
-            input_gallery: [imageBlob],           // Gallery input expects array
-            face_model: faceModel,                // Face restoration model
-            upscale_model: upscaleModel,          // Upscale model
-            upscale: upscale,                     // Scale factor
-            face_detection: "retinaface_resnet50",
-            face_detection_threshold: 10,
-            face_detection_only_center: false,
-            with_model_name: false,
-            save_as_png: true,
-        });
+        // Use predict() with the uploaded file handle
+        // Gallery expects array of file handles, not raw blobs
+        const result = await client.predict("/inference", [
+            [uploadedFile],              // 0: input_gallery - array of uploaded files
+            faceModel,                   // 1: face_model
+            upscaleModel,                // 2: upscale_model  
+            upscale,                     // 3: upscale
+            "retinaface_resnet50",       // 4: face_detection
+            10,                          // 5: face_detection_threshold
+            false,                       // 6: face_detection_only_center
+            false,                       // 7: with_model_name
+            true,                        // 8: save_as_png
+        ]);
 
-        // Wait for the result
-        let resultData: any = null;
-        for await (const event of job) {
-            console.log('📡 Event:', event.type);
-            if (event.type === 'data') {
-                resultData = event.data;
-                break;
-            } else if (event.type === 'status' && event.stage === 'error') {
-                console.error('❌ Space returned error status:', event);
-                throw new Error(`Space error: ${event.message || 'Unknown error'}`);
-            }
-        }
-
-        if (!resultData) {
-            throw new Error("No data received from Gradio Space");
-        }
-
-        console.log('✅ Prediction received:', resultData);
-        const data = resultData as any[];
+        console.log('✅ Prediction received:', result.data);
+        const data = result.data as any[];
 
         // Handle different output formats
         if (data && data[0]) {
-            const output = Array.isArray(data[0]) ? data[0][0] : data[0];
+            const gallery = data[0];
+            const output = Array.isArray(gallery) ? gallery[0] : gallery;
             
             let url: string;
             if (typeof output === 'string') {
@@ -480,9 +473,10 @@ export const processImageWithGradioSpace = async (
                 url = output.url;
             } else if (output?.image?.url) {
                 url = output.image.url;
+            } else if (output?.image?.path) {
+                url = `${spaceUrl}/file=${output.image.path}`;
             } else if (output?.path) {
-                // Some Gradio versions return a path
-                url = `https://sharry121-imagepro.hf.space/file=${output.path}`;
+                url = `${spaceUrl}/file=${output.path}`;
             } else {
                 console.error('Unknown Gradio output format:', output);
                 throw new Error("Could not parse output image");
