@@ -447,12 +447,41 @@ export const processImageWithGradioSpace = async (
             throw new Error("File upload failed - no files returned");
         }
         
-        console.log('✅ Uploaded file data:', uploadedFiles[0]);
+        const uploadedFile = uploadedFiles[0];
+        console.log('✅ Uploaded file data:', uploadedFile);
+        
+        // Gradio Gallery expects GalleryImage format: {image: {path: '...', url: '...'}, caption: null}
+        // The uploadedFile might be just a string path or a FileData object
+        let galleryInput;
+        
+        if (typeof uploadedFile === 'string') {
+            // If it's just a string path, wrap it in the GalleryImage format
+            galleryInput = [{
+                image: {
+                    path: uploadedFile,
+                    url: `${spaceUrl}/file=${uploadedFile}`,
+                    orig_name: file.name,
+                    size: file.size,
+                    mime_type: file.type
+                },
+                caption: null
+            }];
+        } else if (uploadedFile.path) {
+            // If it's a FileData object, wrap it properly
+            galleryInput = [{
+                image: uploadedFile,
+                caption: null
+            }];
+        } else {
+            // Fallback: use the uploadedFile as-is
+            galleryInput = [uploadedFile];
+        }
+        
+        console.log('✅ Gallery input format:', galleryInput);
         
         // Now call predict with the properly formatted file reference
-        // For Gallery input, wrap it in an array
         const result = await client.predict("/inference", [
-            uploadedFiles,            // input_gallery - the files array directly
+            galleryInput,             // input_gallery - properly formatted GalleryImage array
             faceModel,                // face_model
             upscaleModel,             // upscale_model (null for none)
             upscale,                  // upscale
