@@ -407,6 +407,11 @@ export const smartUpscale = async (
 
 
 // ==================== HUGGING FACE GRADIO CLIENT ====================
+/**
+ * Process image using Hugging Face Gradio Space
+ * Note: Gradio 4.44 Gallery components have strict Pydantic validation
+ * We need to bypass the Gallery input and use direct API calls
+ */
 export const processImageWithGradioSpace = async (
     file: File,
     options: {
@@ -418,46 +423,78 @@ export const processImageWithGradioSpace = async (
 ): Promise<Blob> => {
     const {
         faceModel = "CodeFormer.pth",
-        upscaleModel = null,  // Use null instead of "None" for Gradio dropdown
+        upscaleModel = null,
         upscale = 2,
     } = options;
 
-    console.log(`🚀 Connecting to Hugging Face Space (sharry121/ImagePro)... Face: ${faceModel}, Upscale: ${upscaleModel}`);
+    console.log(`🚀 Processing with HF Space (sharry121/ImagePro)... Face: ${faceModel}, Upscale: ${upscaleModel}`);
 
     try {
-        const client = await Client.connect("sharry121/ImagePro");
         const spaceUrl = "https://sharry121-imagepro.hf.space";
-
-        console.log('✅ Connected. Sending image directly...');
         
-        // For Gradio 5.x, pass the File/Blob directly - Gradio client handles the upload
-        // The Gallery component accepts an array of files directly
-        console.log('✅ Sending image for processing...');
+        // Method 1: Direct API call bypassing @gradio/client Gallery issues
+        console.log('✅ Uploading file to Space...');
         
-        // Use predict() with the file directly - Gradio client will handle upload
-        const result = await client.predict("/inference", [
-            [file],                      // 0: input_gallery - array of File objects (Gradio handles conversion)
-            faceModel,                   // 1: face_model (string or null)
-            upscaleModel,                // 2: upscale_model (null for no upscaling, or model name string)
-            upscale,                     // 3: upscale scale factor
-            "retinaface_resnet50",       // 4: face_detection
-            10,                          // 5: face_detection_threshold
-            false,                       // 6: face_detection_only_center
-            false,                       // 7: with_model_name
-            true,                        // 8: save_as_png
-        ]);
-
-        console.log('✅ Prediction received:', result.data);
-        const data = result.data as any[];
-
-        // Handle different output formats
+        // Upload file first
+        const formData = new FormData();
+        formData.append('files', file);
+        
+        const uploadRes = await fetch(`${spaceUrl}/upload`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!uploadRes.ok) {
+            throw new Error(`Upload failed: ${uploadRes.status}`);
+        }
+        
+        const uploadData = await uploadRes.json();
+        const uploadedPath = uploadData[0]; // e.g., "/file=/tmp/gradio/xxx/file.png"
+        console.log('✅ File uploaded:', uploadedPath);
+        
+        // Now call the API endpoint directly
+        console.log('✅ Calling /api/predict...');
+        
+        const apiPayload = {
+            data: [
+                [uploadedPath],           // input_gallery - array of file paths
+                faceModel,                // face_model
+                upscaleModel,             // upscale_model (null is fine)
+                upscale,                  // upscale
+                "retinaface_resnet50",    // face_detection
+                10,                       // face_detection_threshold
+                false,                    // face_detection_only_center
+                false,                    // with_model_name
+                true                      // save_as_png
+            ],
+            fn_index: 0  // First function in the Blocks
+        };
+        
+        const predictRes = await fetch(`${spaceUrl}/api/predict`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(apiPayload)
+        });
+        
+        if (!predictRes.ok) {
+            const errorText = await predictRes.text();
+            throw new Error(`API call failed: ${predictRes.status} - ${errorText}`);
+        }
+        
+        const result = await predictRes.json();
+        console.log('✅ Prediction received:', result);
+        
+        const data = result.data;
         if (data && data[0]) {
             const gallery = data[0];
             const output = Array.isArray(gallery) ? gallery[0] : gallery;
             
             let url: string;
             if (typeof output === 'string') {
-                url = output;
+                // Output is a path like "/file=/tmp/gradio/xxx/output.png"
+                url = output.startsWith('http') ? output : `${spaceUrl}${output}`;
             } else if (output?.url) {
                 url = output.url;
             } else if (output?.image?.url) {
@@ -465,20 +502,20 @@ export const processImageWithGradioSpace = async (
             } else if (output?.image?.path) {
                 url = `${spaceUrl}/file=${output.image.path}`;
             } else if (output?.path) {
-                url = `${spaceUrl}/file=${output.path}`;
+                url = `${spaceUrl}${output.path}`;
             } else {
                 console.error('Unknown Gradio output format:', output);
                 throw new Error("Could not parse output image");
             }
 
-            console.log('✅ Image URL:', url);
+            console.log('✅ Downloading result from:', url);
             return await urlToBlob(url);
         }
         throw new Error("No output image returned from Gradio Space");
 
     } catch (e: any) {
         console.error("Gradio Space Error:", e);
-        throw new Error(`Hugging Face Space failed: ${e.message || 'Unknown error'}`);
+        throw new Error(`HF Space failed: ${e.message || 'Unknown error'}`);
     }
 };
 
