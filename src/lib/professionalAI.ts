@@ -420,34 +420,43 @@ export const processImageWithGradioSpace = async (
         faceModel = "CodeFormer.pth",
         upscaleModel = "None",
         upscale = 2,
-        fidelity = 0.5
     } = options;
 
     console.log(`🚀 Connecting to Hugging Face Space (sharry121/ImagePro)... Face: ${faceModel}, Upscale: ${upscaleModel}`);
 
     try {
         const client = await Client.connect("sharry121/ImagePro");
+        const spaceUrl = "https://sharry121-imagepro.hf.space";
 
-        console.log('✅ Connected. Checking API...');
+        console.log('✅ Connected. Uploading file...');
         
         // Upload the file first using upload_files to get proper file reference
-        // This returns an UploadResponse with files array
-        const spaceUrl = "https://sharry121-imagepro.hf.space";
         const uploadResponse = await client.upload_files(spaceUrl, [file]);
         console.log('✅ File uploaded:', uploadResponse);
 
-        // Extract the uploaded file path/reference
-        const uploadedFile = uploadResponse.files?.[0];
-        if (!uploadedFile) {
+        // Extract the uploaded file path
+        const uploadedFilePath = uploadResponse.files?.[0];
+        if (!uploadedFilePath) {
             throw new Error("File upload failed - no file reference returned");
         }
 
-        console.log('✅ Sending image for processing...');
+        // Gradio 5.x Gallery expects GalleryImage format: {image: {path: string, ...}}
+        // We need to wrap the uploaded file path in the correct structure
+        const galleryImage = {
+            image: {
+                path: uploadedFilePath,
+                url: `${spaceUrl}/file=${uploadedFilePath}`,
+                orig_name: file.name,
+                size: file.size,
+                mime_type: file.type
+            }
+        };
+
+        console.log('✅ Sending image for processing...', galleryImage);
         
-        // Use predict() with the uploaded file handle
-        // Gallery expects array of file handles, not raw blobs
+        // Use predict() with the properly formatted GalleryImage
         const result = await client.predict("/inference", [
-            [uploadedFile],              // 0: input_gallery - array of uploaded files
+            [galleryImage],              // 0: input_gallery - array of GalleryImage objects
             faceModel,                   // 1: face_model
             upscaleModel,                // 2: upscale_model  
             upscale,                     // 3: upscale
