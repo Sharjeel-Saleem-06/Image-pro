@@ -617,11 +617,31 @@ const AIEnhancer = () => {
                             {currentImage.preview}
                           </div>
                         ) : (
-                          <img
-                            src={currentImage.preview}
-                            alt={currentImage.toolName}
-                            className="max-w-full max-h-[65vh] object-contain rounded-lg shadow-md"
-                          />
+                          <div className="relative max-w-full max-h-[65vh]">
+                            {/* Processed Image (Always visible) */}
+                            <img
+                              src={currentImage.preview}
+                              alt={currentImage.toolName}
+                              className="max-w-full max-h-[65vh] object-contain rounded-lg shadow-md"
+                              id="processed-image"
+                            />
+                            
+                            {/* Original Image Overlay (Hidden by default, shown on hover via button) */}
+                            {historyIndex > 0 && history[0] && (
+                              <img
+                                src={history[0].preview}
+                                alt="Original"
+                                className="absolute top-0 left-0 max-w-full max-h-[65vh] object-contain rounded-lg shadow-md opacity-0 transition-opacity duration-200 pointer-events-none"
+                                id="original-overlay"
+                                style={{
+                                  width: 'auto',
+                                  height: 'auto',
+                                  maxWidth: '100%',
+                                  maxHeight: '65vh'
+                                }}
+                              />
+                            )}
+                          </div>
                         )
                       ) : (
                         <div className="text-center text-gray-400">
@@ -638,13 +658,17 @@ const AIEnhancer = () => {
                           size="sm"
                           variant="secondary"
                           className="bg-black/70 text-white hover:bg-black/80 backdrop-blur"
-                          onMouseEnter={() => {
-                            const img = document.querySelector(`img[alt="${currentImage.toolName}"]`) as HTMLImageElement;
-                            if (img && history[0]) img.src = history[0].preview;
+                          onMouseDown={() => {
+                            const overlay = document.getElementById('original-overlay');
+                            if (overlay) overlay.style.opacity = '1';
+                          }}
+                          onMouseUp={() => {
+                            const overlay = document.getElementById('original-overlay');
+                            if (overlay) overlay.style.opacity = '0';
                           }}
                           onMouseLeave={() => {
-                            const img = document.querySelector(`img[alt="${currentImage.toolName}"]`) as HTMLImageElement;
-                            if (img) img.src = currentImage.preview;
+                            const overlay = document.getElementById('original-overlay');
+                            if (overlay) overlay.style.opacity = '0';
                           }}
                         >
                           <Eye className="w-4 h-4 mr-2" /> Hold to Compare
