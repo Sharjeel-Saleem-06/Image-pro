@@ -435,17 +435,24 @@ export const processImageWithGradioSpace = async (
         console.log('✅ Connected. Uploading and processing image...');
         
         // Use client.upload_files with space URL to properly upload the file
-        // This returns a proper FileData object that Gradio Gallery expects
-        const fileData = await client.upload_files(spaceUrl, [file]);
-        console.log('✅ File uploaded:', fileData);
+        // This returns an object with a 'files' property containing the uploaded FileData
+        const uploadResult = await client.upload_files(spaceUrl, [file]);
+        console.log('✅ File uploaded:', uploadResult);
         
-        // The uploaded file data is an array, get the first item
-        const uploadedFile = fileData[0];
+        // Extract the files array from the upload result
+        // uploadResult is {files: [{path: '...', url: '...', ...}]}
+        const uploadedFiles = (uploadResult as any).files || [];
+        
+        if (!uploadedFiles || uploadedFiles.length === 0) {
+            throw new Error("File upload failed - no files returned");
+        }
+        
+        console.log('✅ Uploaded file data:', uploadedFiles[0]);
         
         // Now call predict with the properly formatted file reference
         // For Gallery input, wrap it in an array
         const result = await client.predict("/inference", [
-            [uploadedFile],           // input_gallery - array of uploaded FileData objects
+            uploadedFiles,            // input_gallery - the files array directly
             faceModel,                // face_model
             upscaleModel,             // upscale_model (null for none)
             upscale,                  // upscale
