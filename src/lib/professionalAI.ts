@@ -409,8 +409,7 @@ export const smartUpscale = async (
 // ==================== HUGGING FACE GRADIO CLIENT ====================
 /**
  * Process image using Hugging Face Gradio Space
- * Note: Gradio 4.44 Gallery components have strict Pydantic validation
- * We need to bypass the Gallery input and use direct API calls
+ * Uses @gradio/client v2 with handle_file to properly upload and format files
  */
 export const processImageWithGradioSpace = async (
     file: File,
@@ -430,63 +429,36 @@ export const processImageWithGradioSpace = async (
     console.log(`🚀 Processing with HF Space (sharry121/ImagePro)... Face: ${faceModel}, Upscale: ${upscaleModel}`);
 
     try {
+        const client = await Client.connect("sharry121/ImagePro");
         const spaceUrl = "https://sharry121-imagepro.hf.space";
         
-        // Method 1: Direct API call bypassing @gradio/client Gallery issues
-        console.log('✅ Uploading file to Space...');
+        console.log('✅ Connected. Uploading and processing image...');
         
-        // Upload file first
-        const formData = new FormData();
-        formData.append('files', file);
+        // Use client.upload_files with space URL to properly upload the file
+        // This returns a proper FileData object that Gradio Gallery expects
+        const fileData = await client.upload_files(spaceUrl, [file]);
+        console.log('✅ File uploaded:', fileData);
         
-        const uploadRes = await fetch(`${spaceUrl}/upload`, {
-            method: 'POST',
-            body: formData
-        });
+        // The uploaded file data is an array, get the first item
+        const uploadedFile = fileData[0];
         
-        if (!uploadRes.ok) {
-            throw new Error(`Upload failed: ${uploadRes.status}`);
-        }
+        // Now call predict with the properly formatted file reference
+        // For Gallery input, wrap it in an array
+        const result = await client.predict("/inference", [
+            [uploadedFile],           // input_gallery - array of uploaded FileData objects
+            faceModel,                // face_model
+            upscaleModel,             // upscale_model (null for none)
+            upscale,                  // upscale
+            "retinaface_resnet50",    // face_detection
+            10,                       // face_detection_threshold
+            false,                    // face_detection_only_center
+            false,                    // with_model_name
+            true                      // save_as_png
+        ]);
         
-        const uploadData = await uploadRes.json();
-        const uploadedPath = uploadData[0]; // e.g., "/file=/tmp/gradio/xxx/file.png"
-        console.log('✅ File uploaded:', uploadedPath);
-        
-        // Now call the API endpoint directly
-        console.log('✅ Calling /api/predict...');
-        
-        const apiPayload = {
-            data: [
-                [uploadedPath],           // input_gallery - array of file paths
-                faceModel,                // face_model
-                upscaleModel,             // upscale_model (null is fine)
-                upscale,                  // upscale
-                "retinaface_resnet50",    // face_detection
-                10,                       // face_detection_threshold
-                false,                    // face_detection_only_center
-                false,                    // with_model_name
-                true                      // save_as_png
-            ],
-            fn_index: 0  // First function in the Blocks
-        };
-        
-        const predictRes = await fetch(`${spaceUrl}/api/predict`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(apiPayload)
-        });
-        
-        if (!predictRes.ok) {
-            const errorText = await predictRes.text();
-            throw new Error(`API call failed: ${predictRes.status} - ${errorText}`);
-        }
-        
-        const result = await predictRes.json();
         console.log('✅ Prediction received:', result);
         
-        const data = result.data;
+        const data = result.data as any[];
         if (data && data[0]) {
             const gallery = data[0];
             const output = Array.isArray(gallery) ? gallery[0] : gallery;
@@ -502,7 +474,7 @@ export const processImageWithGradioSpace = async (
             } else if (output?.image?.path) {
                 url = `${spaceUrl}/file=${output.image.path}`;
             } else if (output?.path) {
-                url = `${spaceUrl}${output.path}`;
+                url = output.startsWith('http') ? output : `${spaceUrl}${output.path}`;
             } else {
                 console.error('Unknown Gradio output format:', output);
                 throw new Error("Could not parse output image");
