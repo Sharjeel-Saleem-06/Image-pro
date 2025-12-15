@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
+    "@gradio/client": "^2.0.0",
     "@hookform/resolvers": "^3.10.0",
     "@imgly/background-removal": "^1.7.0",
     "@radix-ui/react-accordion": "^1.2.10",
