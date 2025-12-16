@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import Layout from '@/components/Layout';
+import { trackActivity } from '@/lib/activityTracking';
 import {
   Upload,
   Download,
@@ -649,14 +650,23 @@ const ImageEditor = () => {
     }, 100);
   };
 
-  const downloadImage = () => {
+  const downloadImage = async () => {
     if (!canvasRef.current || !uploadedImage) return;
     
     const canvas = canvasRef.current;
-      const link = document.createElement('a');
+    const link = document.createElement('a');
     link.download = `edited-image-${Date.now()}.png`;
     link.href = canvas.toDataURL();
-      link.click();
+    link.click();
+
+    // Track image edit activity in Supabase
+    await trackActivity('image_edited', {
+      hasAdjustments: brightness[0] !== 100 || contrast[0] !== 100 || saturation[0] !== 100,
+      hasTransforms: rotation !== 0 || flipX || flipY,
+      hasTextOverlays: textOverlays.length > 0,
+      filterApplied: selectedFilter !== 'none',
+      success: true
+    }).catch(err => console.warn('Failed to track activity:', err));
   };
 
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {

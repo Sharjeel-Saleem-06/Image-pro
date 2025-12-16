@@ -15,6 +15,7 @@ import AuthRequiredModal from '@/components/AuthRequiredModal';
 import { useAuthRequired } from '@/hooks/useAuthRequired';
 import { validateImageFile, downloadBlob } from '@/lib/imageUtils';
 import { updateImageProcessed, updateProcessingStats } from '@/lib/statsUtils';
+import { trackActivity } from '@/lib/activityTracking';
 import Tesseract, { createWorker, PSM, OEM } from 'tesseract.js';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import {
@@ -436,6 +437,17 @@ export default function OCR() {
       updateStats(completedResult);
       updateImageProcessed();
       updateProcessingStats('ocrExtractions');
+
+      // Track OCR activity in Supabase
+      await trackActivity('ocr_extraction', {
+        model: usedModel,
+        language: completedResult.language,
+        textLength: completedResult.text?.length || 0,
+        wordCount: completedResult.wordCount,
+        confidence: completedResult.confidence,
+        processingTime: completedResult.processingTime,
+        success: true
+      }).catch(err => console.warn('Failed to track activity:', err));
 
       toast({
         title: "Extraction Complete! ✨",
