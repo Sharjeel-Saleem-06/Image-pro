@@ -6,7 +6,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import HomePage from "./pages/HomePage";
 import ImageConverter from "./pages/ImageConverter";
-import ImageEditor from "./pages/ImageEditorNew";
+import ImageEditor from "./pages/ImageEditor";
 import OCR from "./pages/OCR";
 import AIEnhancer from "./pages/AIEnhancer";
 import About from "./pages/About";
