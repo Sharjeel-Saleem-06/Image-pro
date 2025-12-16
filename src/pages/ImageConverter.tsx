@@ -26,6 +26,7 @@ import {
   flipImage
 } from '@/lib/imageUtils';
 import { updateImageProcessed, updateProcessingStats } from '@/lib/statsUtils';
+import { trackActivity } from '@/lib/activityTracking';
 import JSZip from 'jszip';
 import {
   Upload,
@@ -205,6 +206,15 @@ const ImageConverter = () => {
       const sizeSaved = Math.max(0, fileData.sizeBefore - convertedBlob.size);
       updateImageProcessed(sizeSaved);
       updateProcessingStats('conversions');
+
+      // Track activity in Supabase
+      await trackActivity('image_converted', {
+        format: `${fileData.originalFile.type.split('/')[1]} → ${fileData.outputFormat}`,
+        originalSize: fileData.sizeBefore,
+        convertedSize: convertedBlob.size,
+        quality: fileData.quality,
+        success: true
+      }).catch(err => console.warn('Failed to track activity:', err));
 
       return {
         ...fileData,

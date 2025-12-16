@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { updateUserProfile } from '@/lib/supabase';
+import { getUserStats, UserStats } from '@/lib/activityTracking';
 import Layout from '@/components/Layout';
 import {
     User,
@@ -40,6 +41,8 @@ const ProfilePage: React.FC = () => {
     const [bio, setBio] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [userStats, setUserStats] = useState<UserStats | null>(null);
+    const [statsLoading, setStatsLoading] = useState(true);
     const { toast } = useToast();
     const navigate = useNavigate();
 
@@ -57,6 +60,20 @@ const ProfilePage: React.FC = () => {
             setBio(profile.bio || '');
         }
     }, [profile]);
+
+    // Fetch user stats from database
+    useEffect(() => {
+        const fetchStats = async () => {
+            if (!isAuthenticated) return;
+            
+            setStatsLoading(true);
+            const stats = await getUserStats();
+            setUserStats(stats);
+            setStatsLoading(false);
+        };
+
+        fetchStats();
+    }, [isAuthenticated]);
 
     const handleSaveProfile = async () => {
         if (!user?.id) return;
@@ -95,12 +112,28 @@ const ProfilePage: React.FC = () => {
         });
     };
 
-    // User activity stats (would come from database in real app)
+    // User activity stats from Supabase
     const stats = [
-        { label: 'Images Converted', value: localStorage.getItem('conversions') || '0', icon: Image },
-        { label: 'Images Edited', value: localStorage.getItem('edits') || '0', icon: Wand2 },
-        { label: 'OCR Extractions', value: localStorage.getItem('ocrExtractions') || '0', icon: FileText },
-        { label: 'AI Enhancements', value: localStorage.getItem('aiEnhancements') || '0', icon: Sparkles },
+        { 
+            label: 'Images Converted', 
+            value: statsLoading ? '...' : (userStats?.images_converted || 0).toString(), 
+            icon: Image 
+        },
+        { 
+            label: 'Images Edited', 
+            value: statsLoading ? '...' : (userStats?.images_edited || 0).toString(), 
+            icon: Wand2 
+        },
+        { 
+            label: 'OCR Extractions', 
+            value: statsLoading ? '...' : (userStats?.ocr_extractions || 0).toString(), 
+            icon: FileText 
+        },
+        { 
+            label: 'AI Enhancements', 
+            value: statsLoading ? '...' : (userStats?.ai_enhancements || 0).toString(), 
+            icon: Sparkles 
+        },
     ];
 
     if (!isAuthenticated) {

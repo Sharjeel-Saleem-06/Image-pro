@@ -48,6 +48,7 @@ import {
   smartFaceRestore,
   getAvailableAPIs
 } from '@/lib/professionalAI';
+import { trackActivity } from '@/lib/activityTracking';
 
 interface AITool {
   id: string;
@@ -313,6 +314,16 @@ const AIEnhancer = () => {
           toolId === 'style-transfer' ? { style: styleTransferStyle } :
             toolId === 'ascii-art' ? { width: asciiWidth[0], colored: asciiColored } : undefined
       };
+
+      // Track AI enhancement activity in Supabase
+      const duration = Date.now() - startTime;
+      await trackActivity('ai_enhancement', {
+        tool: toolId,
+        toolName: aiTools.find(t => t.id === toolId)?.name,
+        duration,
+        success: true,
+        useProAPIs
+      }).catch(err => console.warn('Failed to track activity:', err));
 
       // Add to history (trim any future history if we're not at the end)
       const newHistory = [...history.slice(0, historyIndex + 1), newEntry];

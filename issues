@@ -1,60 +1,91 @@
-react-dom.development.js:29895 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
-deprecations.ts:9 ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
-warnOnce @ deprecations.ts:9
-deprecations.ts:9 ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
-warnOnce @ deprecations.ts:9
-AuthContext.tsx:119 Auth state changed: SIGNED_IN
-AuthContext.tsx:119 Auth state changed: INITIAL_SESSION
-professionalAI.ts:479 Trying Hugging Face Space for face restore...
-professionalAI.ts:426 🚀 Connecting to Hugging Face Space (sharry121/ImagePro)... Face: CodeFormer.pth, Upscale: None
-professionalAI.ts:431 ✅ Connected. Sending image...
-professionalAI.ts:468 Gradio Space Error: {type: 'status', endpoint: '/inference', fn_index: 4, time: Mon Dec 15 2025 21:51:04 GMT+0500 (Pakistan Standard Time), original_msg: undefined, …}
-processImageWithGradioSpace @ professionalAI.ts:468
-await in processImageWithGradioSpace
-smartFaceRestore @ professionalAI.ts:480
-processImage @ AIEnhancer.tsx:266
-onClick @ AIEnhancer.tsx:788
-callCallback2 @ react-dom.development.js:4164
-invokeGuardedCallbackDev @ react-dom.development.js:4213
-invokeGuardedCallback @ react-dom.development.js:4277
-invokeGuardedCallbackAndCatchFirstError @ react-dom.development.js:4291
-executeDispatch @ react-dom.development.js:9041
-processDispatchQueueItemsInOrder @ react-dom.development.js:9073
-processDispatchQueue @ react-dom.development.js:9086
-dispatchEventsForPlugins @ react-dom.development.js:9097
-(anonymous) @ react-dom.development.js:9288
-batchedUpdates$1 @ react-dom.development.js:26179
-batchedUpdates @ react-dom.development.js:3991
-dispatchEventForPluginEventSystem @ react-dom.development.js:9287
-dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ react-dom.development.js:6465
-dispatchEvent @ react-dom.development.js:6457
-dispatchDiscreteEvent @ react-dom.development.js:6430
-professionalAI.ts:486 HF Space failed, falling back to Replicate.
-professionalAI.ts:505 📍 Using local scaling fallback for face restore
-professionalAI.ts:479 Trying Hugging Face Space for face restore...
-professionalAI.ts:426 🚀 Connecting to Hugging Face Space (sharry121/ImagePro)... Face: CodeFormer.pth, Upscale: None
-professionalAI.ts:431 ✅ Connected. Sending image...
-professionalAI.ts:468 Gradio Space Error: {type: 'status', endpoint: '/inference', fn_index: 4, time: Mon Dec 15 2025 21:53:02 GMT+0500 (Pakistan Standard Time), original_msg: undefined, …}
-processImageWithGradioSpace @ professionalAI.ts:468
-await in processImageWithGradioSpace
-smartFaceRestore @ professionalAI.ts:480
-processImage @ AIEnhancer.tsx:266
-onClick @ AIEnhancer.tsx:788
-callCallback2 @ react-dom.development.js:4164
-invokeGuardedCallbackDev @ react-dom.development.js:4213
-invokeGuardedCallback @ react-dom.development.js:4277
-invokeGuardedCallbackAndCatchFirstError @ react-dom.development.js:4291
-executeDispatch @ react-dom.development.js:9041
-processDispatchQueueItemsInOrder @ react-dom.development.js:9073
-processDispatchQueue @ react-dom.development.js:9086
-dispatchEventsForPlugins @ react-dom.development.js:9097
-(anonymous) @ react-dom.development.js:9288
-batchedUpdates$1 @ react-dom.development.js:26179
-batchedUpdates @ react-dom.development.js:3991
-dispatchEventForPluginEventSystem @ react-dom.development.js:9287
-dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ react-dom.development.js:6465
-dispatchEvent @ react-dom.development.js:6457
-dispatchDiscreteEvent @ react-dom.development.js:6430
-professionalAI.ts:486 HF Space failed, falling back to Replicate.
-professionalAI.ts:505 📍 Using local scaling fallback for face restore
-AuthContext.tsx:119 Auth state changed: TOKEN_REFRESHED
+===== Application Startup at 2025-12-15 17:09:40 =====
+
+/app/app.py:1293: DeprecationWarning: The 'css' parameter in the Blocks constructor will be removed in Gradio 6.0. You will need to pass 'css' to Blocks.launch() instead.
+  with gr.Blocks(title = title, css = css) as demo:
+* Running on local URL:  http://0.0.0.0:7860, with SSR ⚡ (experimental, to disable set `ssr_mode=False` in `launch()`)
+* To create a public link, set `share=True` in `launch()`.
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/gradio/queueing.py", line 759, in process_events
+    response = await route_utils.call_process_api(
+  File "/usr/local/lib/python3.10/site-packages/gradio/route_utils.py", line 354, in call_process_api
+    output = await app.get_blocks().process_api(
+  File "/usr/local/lib/python3.10/site-packages/gradio/blocks.py", line 2187, in process_api
+    inputs = await self.preprocess_data(
+  File "/usr/local/lib/python3.10/site-packages/gradio/blocks.py", line 1838, in preprocess_data
+    inputs_cached = data_model.model_validate(
+  File "/usr/local/lib/python3.10/site-packages/pydantic/main.py", line 716, in model_validate
+    return cls.__pydantic_validator__.validate_python(
+pydantic_core._pydantic_core.ValidationError: 2 validation errors for GalleryData
+0.GalleryImage
+  Input should be a valid dictionary or instance of GalleryImage [type=model_type, input_value='/tmp/gradio/c1eda55a241f.../inpainting_result2.png', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/model_type
+0.GalleryVideo
+  Input should be a valid dictionary or instance of GalleryVideo [type=model_type, input_value='/tmp/gradio/c1eda55a241f.../inpainting_result2.png', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/model_type
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/gradio/queueing.py", line 759, in process_events
+    response = await route_utils.call_process_api(
+  File "/usr/local/lib/python3.10/site-packages/gradio/route_utils.py", line 354, in call_process_api
+    output = await app.get_blocks().process_api(
+  File "/usr/local/lib/python3.10/site-packages/gradio/blocks.py", line 2187, in process_api
+    inputs = await self.preprocess_data(
+  File "/usr/local/lib/python3.10/site-packages/gradio/blocks.py", line 1849, in preprocess_data
+    processed_input.append(block.preprocess(inputs_cached))
+  File "/usr/local/lib/python3.10/site-packages/gradio/components/dropdown.py", line 206, in preprocess
+    raise Error(
+gradio.exceptions.Error: "Value: None is not in the list of choices: [None, 'SRVGG, realesr-general-x4v3.pth', 'SRVGG, realesr-animevideov3.pth', 'SRVGG, 4xLSDIRCompact.pth', 'SRVGG, 4xLSDIRCompactC.pth', 'SRVGG, 4xLSDIRCompactR.pth', 'SRVGG, 4xLSDIRCompactN.pth', 'SRVGG, 4xLSDIRCompactC3.pth', 'SRVGG, 4xLSDIRCompactR3.pth', 'SRVGG, 4xLSDIRCompactCR3.pth', 'SRVGG, 2xParimgCompact.pth', 'SRVGG, 1xExposureCorrection_compact.pth', 'SRVGG, 1xUnderExposureCorrection_compact.pth', 'SRVGG, 1xOverExposureCorrection_compact.pth', 'SRVGG, 2x-sudo-UltraCompact.pth', 'SRVGG, 2x_AnimeJaNai_HD_V3_SuperUltraCompact.pth', 'SRVGG, 2x_AnimeJaNai_HD_V3_UltraCompact.pth', 'SRVGG, 2x_AnimeJaNai_HD_V3_Compact.pth', 'RRDB, RealESRGAN_x4plus_anime_6B.pth', 'RRDB, RealESRGAN_x2plus.pth', 'RRDB, RealESRNet_x4plus.pth', 'RRDB, RealESRGAN_x4plus.pth', 'ESRGAN, 4x-AnimeSharp.pth', 'ESRGAN, 4x_IllustrationJaNai_V1_ESRGAN_135k.pth', 'ESRGAN, 2x-sudo-RealESRGAN.pth', 'ESRGAN, 2x-sudo-RealESRGAN-Dropout.pth', 'ESRGAN, 4xNomos2_otf_esrgan.pth', 'ESRGAN, 4xNomosWebPhoto_esrgan.pth', 'ESRGAN, 4x_foolhardy_Remacri.pth', 'ESRGAN, 4x_foolhardy_Remacri_ExtraSmoother.pth', 'DAT, 4xNomos8kDAT.pth', 'DAT, 4x-DWTP-DS-dat2-v3.pth', 'DAT, 4xBHI_dat2_real.pth', 'DAT, 4xBHI_dat2_otf.pth', 'DAT, 4xBHI_dat2_multiblur.pth', 'DAT, 4xBHI_dat2_multiblurjpg.pth', 'DAT, 4x_IllustrationJaNai_V1_DAT2_190k.pth', 'DAT, 4x-PBRify_UpscalerDAT2_V1.pth', 'DAT, 4xBHI_dat2_otf_nn.pth', 'HAT, 4xNomos8kSCHAT-L.pth', 'HAT, 4xNomos8kSCHAT-S.pth', 'HAT, 4xNomos8kHAT-L_otf.pth', 'HAT, 4xBHI_small_hat-l.pth', 'RealPLKSR_dysample, 4xHFA2k_ludvae_realplksr_dysample.pth', 'RealPLKSR_dysample, 4xArtFaces_realplksr_dysample.pth', 'RealPLKSR_dysample, 4x-PBRify_RPLKSRd_V3.pth', 'RealPLKSR_dysample, 4xNomos2_realplksr_dysample.pth', 'RealPLKSR, 2x-AnimeSharpV2_RPLKSR_Sharp.pth', 'RealPLKSR, 2x-AnimeSharpV2_RPLKSR_Soft.pth', 'RealPLKSR, 4xPurePhoto-RealPLSKR.pth', 'RealPLKSR, 2x_Text2HD_v.1-RealPLKSR.pth', 'RealPLKSR, 2xVHS2HD-RealPLKSR.pth', 'RealPLKSR, 4xNomosWebPhoto_RealPLKSR.pth', 'DRCT, 4xNomos2_hq_drct-l.pth', 'ATD, 4xNomos2_hq_atd.pth', 'MoSR, 4xNomos2_hq_mosr.pth', 'MoSR, 2x-AnimeSharpV2_MoSR_Sharp.pth', 'MoSR, 2x-AnimeSharpV2_MoSR_Soft.pth', 'SRFormer, 4xNomos8kSCSRFormer.pth', 'SRFormer, 4xFrankendataFullDegradation_SRFormer460K_g.pth', 'SRFormer, 4xFrankendataPretrainer_SRFormer400K_g.pth', 'SRFormer, 1xFrankenfixer_SRFormerLight_g.pth']"
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/gradio/queueing.py", line 759, in process_events
+    response = await route_utils.call_process_api(
+  File "/usr/local/lib/python3.10/site-packages/gradio/route_utils.py", line 354, in call_process_api
+    output = await app.get_blocks().process_api(
+  File "/usr/local/lib/python3.10/site-packages/gradio/blocks.py", line 2187, in process_api
+    inputs = await self.preprocess_data(
+  File "/usr/local/lib/python3.10/site-packages/gradio/blocks.py", line 1838, in preprocess_data
+    inputs_cached = data_model.model_validate(
+  File "/usr/local/lib/python3.10/site-packages/pydantic/main.py", line 716, in model_validate
+    return cls.__pydantic_validator__.validate_python(
+pydantic_core._pydantic_core.ValidationError: 2 validation errors for GalleryData
+0.GalleryImage
+  Input should be a valid dictionary or instance of GalleryImage [type=model_type, input_value='/tmp/gradio/c1eda55a241f...85b14137534c58fa87/blob', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/model_type
+0.GalleryVideo
+  Input should be a valid dictionary or instance of GalleryVideo [type=model_type, input_value='/tmp/gradio/c1eda55a241f...85b14137534c58fa87/blob', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/model_type
+Too little data for declared Content-Length
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/gradio/queueing.py", line 759, in process_events
+    response = await route_utils.call_process_api(
+  File "/usr/local/lib/python3.10/site-packages/gradio/route_utils.py", line 354, in call_process_api
+    output = await app.get_blocks().process_api(
+  File "/usr/local/lib/python3.10/site-packages/gradio/blocks.py", line 2187, in process_api
+    inputs = await self.preprocess_data(
+  File "/usr/local/lib/python3.10/site-packages/gradio/blocks.py", line 1838, in preprocess_data
+    inputs_cached = data_model.model_validate(
+  File "/usr/local/lib/python3.10/site-packages/pydantic/main.py", line 716, in model_validate
+    return cls.__pydantic_validator__.validate_python(
+pydantic_core._pydantic_core.ValidationError: 2 validation errors for GalleryData
+0.GalleryImage
+  Input should be a valid dictionary or instance of GalleryImage [type=model_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/model_type
+0.GalleryVideo
+  Input should be a valid dictionary or instance of GalleryVideo [type=model_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/model_type
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/gradio/queueing.py", line 759, in process_events
+    response = await route_utils.call_process_api(
+  File "/usr/local/lib/python3.10/site-packages/gradio/route_utils.py", line 354, in call_process_api
+    output = await app.get_blocks().process_api(
+  File "/usr/local/lib/python3.10/site-packages/gradio/blocks.py", line 2187, in process_api
+    inputs = await self.preprocess_data(
+  File "/usr/local/lib/python3.10/site-packages/gradio/blocks.py", line 1838, in preprocess_data
+    inputs_cached = data_model.model_validate(
+  File "/usr/local/lib/python3.10/site-packages/pydantic/main.py", line 716, in model_validate
+    return cls.__pydantic_validator__.validate_python(
+pydantic_core._pydantic_core.ValidationError: 2 validation errors for GalleryData
+0.GalleryImage
+  Input should be a valid dictionary or instance of GalleryImage [type=model_type, input_value='/tmp/gradio/c1eda55a241f.../inpainting_result2.png', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/model_type
+0.GalleryVideo
+  Input should be a valid dictionary or instance of GalleryVideo [type=model_type, input_value='/tmp/gradio/c1eda55a241f.../inpainting_result2.png', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/model_type
