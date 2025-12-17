@@ -24,7 +24,7 @@ const Footer = () => {
   return (
     <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
           {/* Brand & Description */}
           <div className="md:col-span-1 space-y-4">
             <Link to="/" className="flex items-center space-x-2">
@@ -54,6 +54,22 @@ const Footer = () => {
                   >
                     {link.label}
                   </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Features / Tags */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
+              Features
+            </h3>
+            <ul className="space-y-3">
+              {['AI Restore', 'Smart Crop', 'Filters', 'Converter'].map((item) => (
+                <li key={item}>
+                  <span className="text-sm text-gray-600 dark:text-gray-400 cursor-default">
+                    {item}
+                  </span>
                 </li>
               ))}
             </ul>

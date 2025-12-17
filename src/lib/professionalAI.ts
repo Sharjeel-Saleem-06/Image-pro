@@ -411,6 +411,33 @@ export const smartUpscale = async (
  * Process image using Hugging Face Gradio Space
  * Uses @gradio/client v2 with handle_file to properly upload and format files
  */
+// Parse Space IDs from environment or use default
+const DEFAULT_SPACE_ID = "sharry121/ImagePro";
+const SPACE_IDS = (import.meta.env.VITE_HF_SPACE_IDS || DEFAULT_SPACE_ID)
+    .split(',')
+    .map(id => id.trim())
+    .filter(id => id.length > 0);
+
+// Parse HF Tokens for fallback/rate-limit handling
+const HF_TOKENS = [
+    import.meta.env.VITE_HUGGINGFACE_API_KEY,
+    import.meta.env.VITE_HUGGINGFACE_API_KEY_2
+].filter((t): t is string => !!t && t.length > 0);
+
+/**
+ * Helper to construct the direct Space URL from an ID
+ * e.g., "sharry121/ImagePro" -> "https://sharry121-imagepro.hf.space"
+ */
+const getSpaceUrl = (spaceId: string): string => {
+    try {
+        const [user, name] = spaceId.split('/');
+        if (!user || !name) return `https://${spaceId.replace('/', '-')}.hf.space`; // Fallback
+        return `https://${user}-${name.toLowerCase()}.hf.space`;
+    } catch (e) {
+        return `https://${spaceId.replace('/', '-')}.hf.space`;
+    }
+};
+
 export const processImageWithGradioSpace = async (
     file: File,
     options: {
@@ -426,115 +453,112 @@ export const processImageWithGradioSpace = async (
         upscale = 2,
     } = options;
 
-    console.log(`🚀 Processing with HF Space (sharry121/ImagePro)... Face: ${faceModel}, Upscale: ${upscaleModel}`);
+    let lastError: Error | null = null;
 
-    try {
-        const client = await Client.connect("sharry121/ImagePro");
-        const spaceUrl = "https://sharry121-imagepro.hf.space";
-        
-        console.log('✅ Connected. Uploading and processing image...');
-        
-        // Use client.upload_files with space URL to properly upload the file
-        // This returns an object with a 'files' property containing the uploaded FileData
-        const uploadResult = await client.upload_files(spaceUrl, [file]);
-        console.log('✅ File uploaded:', uploadResult);
-        
-        // Extract the files array from the upload result
-        // uploadResult is {files: [{path: '...', url: '...', ...}]}
-        const uploadedFiles = (uploadResult as any).files || [];
-        
-        if (!uploadedFiles || uploadedFiles.length === 0) {
-            throw new Error("File upload failed - no files returned");
-        }
-        
-        const uploadedFile = uploadedFiles[0];
-        console.log('✅ Uploaded file data:', uploadedFile);
-        
-        // Gradio Gallery expects GalleryImage format: {image: {path: '...', url: '...'}, caption: null}
-        // The uploadedFile might be just a string path or a FileData object
-        let galleryInput;
-        
-        if (typeof uploadedFile === 'string') {
-            // If it's just a string path, wrap it in the GalleryImage format
-            galleryInput = [{
-                image: {
-                    path: uploadedFile,
-                    url: `${spaceUrl}/file=${uploadedFile}`,
-                    orig_name: file.name,
-                    size: file.size,
-                    mime_type: file.type
-                },
-                caption: null
-            }];
-        } else if (uploadedFile.path) {
-            // If it's a FileData object, wrap it properly
-            galleryInput = [{
-                image: uploadedFile,
-                caption: null
-            }];
-        } else {
-            // Fallback: use the uploadedFile as-is
-            galleryInput = [uploadedFile];
-        }
-        
-        console.log('✅ Gallery input format:', galleryInput);
-        
-        // Now call predict with the properly formatted file reference
-        const result = await client.predict("/inference", [
-            galleryInput,             // input_gallery - properly formatted GalleryImage array
-            faceModel,                // face_model
-            upscaleModel,             // upscale_model (null for none)
-            upscale,                  // upscale
-            "retinaface_resnet50",    // face_detection
-            10,                       // face_detection_threshold
-            false,                    // face_detection_only_center
-            false,                    // with_model_name
-            true                      // save_as_png
-        ]);
-        
-        console.log('✅ Prediction received:', result);
-        
-        const data = result.data as any[];
-        if (data && data[0]) {
-            const gallery = data[0];
-            
-            // Gradio returns multiple images in the gallery (different processing stages/versions)
-            // We want the LAST/BEST quality image (usually the final processed result)
-            let output;
-            if (Array.isArray(gallery) && gallery.length > 0) {
-                // Take the last image in the gallery (best quality/final result)
-                output = gallery[gallery.length - 1];
-                console.log(`✅ Gallery has ${gallery.length} images, selecting the last one (best quality)`);
-            } else {
-                output = gallery;
+    // Iterate through all available spaces (fallback mechanism)
+    for (const spaceId of SPACE_IDS) {
+        // Try with tokens if available, otherwise just use the space without token
+        const tokensToTry = HF_TOKENS.length > 0 ? HF_TOKENS : [undefined];
+
+        for (const token of tokensToTry) {
+            console.log(`🚀 Processing with HF Space (${spaceId})${token ? ' + Token' : ''}... Face: ${faceModel}, Upscale: ${upscaleModel}`);
+
+            try {
+                const client = await Client.connect(spaceId, (token ? { hf_token: token } : {}) as any);
+                const spaceUrl = getSpaceUrl(spaceId);
+
+                console.log(`✅ Connected to ${spaceId}. Uploading to ${spaceUrl}...`);
+
+                // Use client.upload_files with space URL to properly upload the file
+                const uploadResult = await client.upload_files(spaceUrl, [file]);
+                console.log('✅ File uploaded:', uploadResult);
+
+                const uploadedFiles = (uploadResult as any).files || [];
+
+                if (!uploadedFiles || uploadedFiles.length === 0) {
+                    throw new Error("File upload failed - no files returned");
+                }
+
+                const uploadedFile = uploadedFiles[0];
+
+                // Format input for Gallery
+                let galleryInput;
+                if (typeof uploadedFile === 'string') {
+                    galleryInput = [{
+                        image: {
+                            path: uploadedFile,
+                            url: `${spaceUrl}/file=${uploadedFile}`,
+                            orig_name: file.name,
+                            size: file.size,
+                            mime_type: file.type
+                        },
+                        caption: null
+                    }];
+                } else if (uploadedFile.path) {
+                    galleryInput = [{
+                        image: uploadedFile,
+                        caption: null
+                    }];
+                } else {
+                    galleryInput = [uploadedFile];
+                }
+
+                // Call predict
+                const result = await client.predict("/inference", [
+                    galleryInput,
+                    faceModel,
+                    upscaleModel,
+                    upscale,
+                    "retinaface_resnet50",
+                    10,
+                    false,
+                    false,
+                    true
+                ]);
+
+                console.log('✅ Prediction received:', result);
+
+                const data = result.data as any[];
+                if (data && data[0]) {
+                    const gallery = data[0];
+                    let output;
+
+                    if (Array.isArray(gallery) && gallery.length > 0) {
+                        output = gallery[gallery.length - 1];
+                    } else {
+                        output = gallery;
+                    }
+
+                    let url: string;
+                    if (typeof output === 'string') {
+                        url = output.startsWith('http') ? output : `${spaceUrl}${output}`;
+                    } else if (output?.url) {
+                        url = output.url;
+                    } else if (output?.image?.url) {
+                        url = output.image.url;
+                    } else if (output?.path) {
+                        url = output.startsWith('http') ? output : `${spaceUrl}${output.path}`;
+                    } else {
+                        throw new Error("Could not parse output image");
+                    }
+
+                    console.log('✅ Downloading result from:', url);
+                    return await urlToBlob(url);
+                }
+                throw new Error("No output image returned from Gradio Space");
+
+            } catch (e: any) {
+                console.warn(`⚠️ Space ${spaceId} ${token ? '(Token failed)' : ''} failed:`, e.message);
+                lastError = e;
+                // Continue to next token/space
+                continue;
             }
-            
-            let url: string;
-            if (typeof output === 'string') {
-                // Output is a path like "/file=/tmp/gradio/xxx/output.png"
-                url = output.startsWith('http') ? output : `${spaceUrl}${output}`;
-            } else if (output?.url) {
-                url = output.url;
-            } else if (output?.image?.url) {
-                url = output.image.url;
-            } else if (output?.image?.path) {
-                url = `${spaceUrl}/file=${output.image.path}`;
-            } else if (output?.path) {
-                url = output.startsWith('http') ? output : `${spaceUrl}${output.path}`;
-            } else {
-                console.error('Unknown Gradio output format:', output);
-                throw new Error("Could not parse output image");
-            }
-
-            console.log('✅ Downloading result from:', url);
-            return await urlToBlob(url);
         }
-        throw new Error("No output image returned from Gradio Space");
-
-    } catch (e: any) {
-        console.error("Gradio Space Error:", e);
-        throw new Error(`HF Space failed: ${e.message || 'Unknown error'}`);
     }
+
+    // If we get here, all spaces failed
+    console.error("❌ All Hugging Face Spaces failed.");
+    throw new Error(`All High-Performance Recovery servers failed. Last error: ${lastError?.message || 'Unknown'}`);
 };
 
 export const smartFaceRestore = async (
@@ -574,6 +598,94 @@ export const smartFaceRestore = async (
     return await upscaleImage(file, upscale);
 };
 
+// ==================== TEXT TO IMAGE (Z-Image-Turbo) ====================
+// Uses https://huggingface.co/spaces/mrfakename/Z-Image-Turbo
+
+interface ZImageGenerationOptions {
+    prompt: string;
+    width?: number;
+    height?: number;
+    steps?: number;
+    seed?: number;
+}
+
+// Parse Z-Image-Turbo Space IDs
+const DEFAULT_Z_TURBO_ID = "mrfakename/Z-Image-Turbo";
+const Z_TURBO_IDS = (import.meta.env.VITE_Z_IMAGE_TURBO_IDS || DEFAULT_Z_TURBO_ID)
+    .split(',')
+    .map(id => id.trim())
+    .filter(id => id.length > 0);
+
+export const generateImageWithZImageTurbo = async (options: ZImageGenerationOptions): Promise<Blob> => {
+    const {
+        prompt,
+        width = 1024,
+        height = 1024,
+        steps = 9,
+        seed = 42
+    } = options;
+
+    let lastError: Error | null = null;
+
+    for (const spaceId of Z_TURBO_IDS) {
+        const tokensToTry = HF_TOKENS.length > 0 ? HF_TOKENS : [undefined];
+
+        for (const token of tokensToTry) {
+            console.log(`🚀 Generating with Z-Image-Turbo (${spaceId})${token ? ' + Token' : ''}...`, { prompt, width, height });
+
+            try {
+                // Connect to the space
+                const client = await Client.connect(spaceId, (token ? { hf_token: token } : {}) as any);
+
+                // Call the generate_image endpoint
+                const result = await client.predict("/generate_image", {
+                    prompt: prompt,
+                    height: height,
+                    width: width,
+                    num_inference_steps: steps,
+                    seed: seed,
+                    randomize_seed: true
+                });
+
+                console.log('✅ Generation result:', result);
+
+                const data = result.data as any[];
+
+                if (data && data[0]) {
+                    const imageOutput = data[0];
+                    let url: string;
+
+                    if (typeof imageOutput === 'string') {
+                        url = imageOutput;
+                    } else if (imageOutput?.url) {
+                        url = imageOutput.url;
+                    } else if (imageOutput?.path) {
+                        // For Z-Image-Turbo, sometimes we get a path that needs the space URL prefix
+                        // Construct space URL similarly to ImagePro
+                        const spaceUrl = getSpaceUrl(spaceId);
+                        url = imageOutput.path.startsWith('http') ? imageOutput.path : `${spaceUrl}/file=${imageOutput.path}`;
+                    } else {
+                        console.error('Unknown output format:', imageOutput);
+                        throw new Error("Could not parse output image");
+                    }
+
+                    console.log('✅ Downloading generated image from:', url);
+                    return await urlToBlob(url);
+                }
+
+                throw new Error("No output image returned from Generator");
+
+            } catch (e: any) {
+                console.warn(`⚠️ Z-Image-Turbo Space ${spaceId} ${token ? '(Token failed)' : ''} failed:`, e.message);
+                lastError = e;
+                continue; // Try next token/space
+            }
+        }
+    }
+
+    console.error("❌ All Z-Image-Turbo Spaces failed.");
+    throw new Error(`All Image Generation servers failed. Last error: ${lastError?.message || 'Unknown'}`);
+};
 
 export default {
     removeBackgroundWithRemoveBg,
@@ -583,6 +695,7 @@ export default {
     restoreFaceWithGFPGAN,
     restoreFaceWithCodeFormer,
     upscaleWithStability,
+    generateImageWithZImageTurbo, // Add new function
     smartRemoveBackground,
     smartUpscale,
     smartFaceRestore,

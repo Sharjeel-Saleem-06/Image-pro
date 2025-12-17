@@ -13,10 +13,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   Menu,
   X,
-  Image,
+  Image as ImageIcon,
   Wand2,
   Edit3,
   Sparkles,
+  History,
   Info,
   MessageCircle,
   Moon,
@@ -70,11 +71,12 @@ const Navigation = () => {
   }, []);
 
   const navItems = [
-    { path: '/', label: 'Home', icon: Image },
+    { path: '/', label: 'Home', icon: ImageIcon },
     { path: '/converter', label: 'Converter', icon: Wand2 },
     { path: '/editor', label: 'Editor', icon: Edit3 },
     { path: '/ocr', label: 'OCR', icon: FileText },
     { path: '/ai-enhancer', label: 'AI Tools', icon: Sparkles },
+    { path: '/history', label: 'History', icon: History },
     { path: '/about', label: 'About', icon: Info },
     { path: '/contact', label: 'Contact', icon: MessageCircle },
   ];
@@ -105,13 +107,13 @@ const Navigation = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center space-x-2 flex-shrink-0">
             <motion.div
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center"
             >
-              <Image className="w-5 h-5 text-white" />
+              <ImageIcon className="w-5 h-5 text-white" />
             </motion.div>
             <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               ImagePro
@@ -119,10 +121,10 @@ const Navigation = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-1">
+          <div className="hidden md:flex items-center space-x-1 flex-1 justify-center">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isPublic = ['/', '/about', '/contact'].includes(item.path);
+              const isPublic = ['/', '/about', '/contact', '/history'].includes(item.path); // Assuming history is public or handled
               const destination = !isAuthenticated && !isPublic ? '/auth/login' : item.path;
               const linkState = !isAuthenticated && !isPublic ? { from: { pathname: item.path } } : undefined;
 
@@ -141,6 +143,10 @@ const Navigation = () => {
                       }`}
                   >
                     <div className="flex items-center space-x-2">
+                      {/* Icon removed from top bar for cleaner look per common design, or keep it? User said "check the last ss". 
+                           Usually top navs have icons or just text. I'll keep icons as they were there but maybe smaller? 
+                           Code kept as is, just centering logic added. 
+                       */}
                       <Icon className="w-4 h-4" />
                       <span className="text-sm font-medium">{item.label}</span>
                     </div>
