@@ -50,10 +50,6 @@ const ImageEditor = () => {
   const { uploadedImage, currentImage, addToHistory, setUploadedImage, undo, redo, canUndo, canRedo } = useEditor();
   const [isReady, setIsReady] = useState(false);
 
-  useEffect(() => {
-    console.log('Available TABS:', TABS);
-  }, []);
-
   // AI Analysis State
   const [isAiAnalysisDialogOpen, setIsAiAnalysisDialogOpen] = useState(false);
   const [aiAnalysisResult, setAiAnalysisResult] = useState<string | null>(null);
@@ -717,44 +713,7 @@ const ImageEditor = () => {
             }}
             Text={{ text: 'Double click to edit...' }}
             Rotate={{ angle: 90, componentType: 'slider' }}
-            Crop={{
-              presetsItems: [
-                {
-                  titleKey: 'classicTv',
-                  descriptionKey: '4:3',
-                  ratio: 4 / 3,
-                },
-                {
-                  titleKey: 'cinemascope',
-                  descriptionKey: '21:9',
-                  ratio: 21 / 9,
-                },
-              ],
-              presetsFolders: [
-                {
-                  titleKey: 'socialMedia',
-                  groups: [
-                    {
-                      titleKey: 'facebook',
-                      items: [
-                        {
-                          titleKey: 'profile',
-                          width: 180,
-                          height: 180,
-                          descriptionKey: 'fbProfileSize',
-                        },
-                        {
-                          titleKey: 'coverPhoto',
-                          width: 820,
-                          height: 312,
-                          descriptionKey: 'fbCoverPhotoSize',
-                        },
-                      ],
-                    },
-                  ],
-                },
-              ],
-            }}
+            tabsIds={[TABS.ADJUST, TABS.ANNOTATE, TABS.FILTERS, TABS.FINETUNE, TABS.RESIZE, TABS.WATERMARK]}
             defaultTabId={TABS.ADJUST}
             defaultToolId={null}
             theme={{
@@ -763,7 +722,6 @@ const ImageEditor = () => {
                 fontFamily: 'Inter, system-ui, sans-serif',
               }
             }}
-            observePluginContainerSize={true}
           />
 
 

@@ -105,23 +105,20 @@ const ImageConverter = () => {
     e.preventDefault();
     setIsDragging(false);
 
-    // Check if user is authenticated
-    if (!requireAuth()) return;
-
+    // Allow file drop without auth (auth required only for conversion)
     const droppedFiles = Array.from(e.dataTransfer.files);
-    await processNewFiles(droppedFiles);
-  }, [requireAuth]);
+    if (droppedFiles.length > 0) {
+      await processNewFiles(droppedFiles);
+    }
+  }, []);
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Check if user is authenticated
-    if (!requireAuth()) {
-      e.target.value = ''; // Reset input
-      return;
-    }
-
+    // Allow file selection without auth (auth required only for conversion)
     const selectedFiles = Array.from(e.target.files || []);
-    await processNewFiles(selectedFiles);
-  }, [requireAuth]);
+    if (selectedFiles.length > 0) {
+      await processNewFiles(selectedFiles);
+    }
+  }, []);
 
   const processNewFiles = async (newFiles: File[]) => {
     const validFiles: ProcessedFile[] = [];
@@ -242,6 +239,9 @@ const ImageConverter = () => {
   };
 
   const convertAllFiles = async () => {
+    // Require auth for actual conversion
+    if (!requireAuth()) return;
+
     setIsProcessing(true);
 
     const pendingFiles = files.filter(f => f.status === 'pending');

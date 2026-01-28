@@ -130,24 +130,24 @@ const HomePage = () => {
     { icon: Award, label: 'Cost to Use', value: 'Free' }
   ];
 
-  const testimonials = [
+  const highlights = [
     {
-      name: 'Sarah Chen',
-      role: 'Graphic Designer',
-      content: 'ImagePro has revolutionized my workflow. The AI features save me hours every day!',
-      rating: 5
+      title: '100% Client-Side Processing',
+      description: 'All image processing happens in your browser. Your images never leave your device, ensuring complete privacy and security.',
+      icon: Shield,
+      color: 'from-green-500 to-emerald-500'
     },
     {
-      name: 'Mike Rodriguez',
-      role: 'Photographer',
-      content: 'The batch processing feature is incredible. I can process hundreds of photos in minutes.',
-      rating: 5
+      title: 'AI-Powered Tools',
+      description: 'Advanced AI features including face restoration, background removal, upscaling, and OCR powered by TensorFlow.js and Tesseract.',
+      icon: Brain,
+      color: 'from-purple-500 to-pink-500'
     },
     {
-      name: 'Emily Johnson',
-      role: 'Content Creator',
-      content: 'Love that everything works offline. My images stay private and the quality is amazing.',
-      rating: 5
+      title: 'Works Offline',
+      description: 'Once loaded, ImagePro works completely offline. No internet connection required for most features. Perfect for on-the-go editing.',
+      icon: Zap,
+      color: 'from-blue-500 to-cyan-500'
     }
   ];
 
@@ -390,7 +390,7 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Testimonials Section */}
+      {/* Highlights Section */}
       <section className="py-20 px-4 bg-gradient-to-r from-purple-50/50 to-pink-50/50 dark:from-purple-900/10 dark:to-pink-900/10">
         <div className="max-w-6xl mx-auto">
           <motion.div
@@ -401,40 +401,38 @@ const HomePage = () => {
             className="text-center mb-16"
           >
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Loved by <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Professionals</span>
+              Why <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">ImagePro</span>?
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300">
-              Join thousands of creators who trust ImagePro for their image processing needs.
+              Professional-grade image processing that respects your privacy
             </p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <motion.div
-                key={testimonial.name}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.2 }}
-                viewport={{ once: true }}
-              >
-                <Card className="h-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-lg">
-                  <CardContent className="p-6">
-                    <div className="flex items-center mb-4">
-                      {[...Array(testimonial.rating)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
-                      ))}
-                    </div>
-                    <p className="text-gray-600 dark:text-gray-300 mb-4 italic">
-                      "{testimonial.content}"
-                    </p>
-                    <div>
-                      <div className="font-semibold">{testimonial.name}</div>
-                      <div className="text-sm text-gray-500">{testimonial.role}</div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+            {highlights.map((highlight, index) => {
+              const Icon = highlight.icon;
+              return (
+                <motion.div
+                  key={highlight.title}
+                  initial={{ opacity: 0, y: 50 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: index * 0.2 }}
+                  viewport={{ once: true }}
+                >
+                  <Card className="h-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-lg hover:shadow-2xl transition-all duration-300">
+                    <CardContent className="p-8">
+                      <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${highlight.color} flex items-center justify-center mb-6 shadow-lg`}>
+                        <Icon className="w-8 h-8 text-white" />
+                      </div>
+                      <h3 className="text-2xl font-bold mb-4">{highlight.title}</h3>
+                      <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                        {highlight.description}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>

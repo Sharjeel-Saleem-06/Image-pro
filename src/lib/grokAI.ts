@@ -176,10 +176,10 @@ Breakdown:
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "Authorization": `Bearer ${apiKey} `
+                        "Authorization": `Bearer ${apiKey}`
                     },
                     body: JSON.stringify({
-                        model: "grok-vision-beta", // Using Grok Vision model
+                        model: "grok-2-vision-1212", // Updated to latest Grok vision model
                         messages: [
                             {
                                 role: "system",
@@ -189,12 +189,19 @@ Breakdown:
                                 role: "user",
                                 content: [
                                     { type: "text", text: userPrompt },
-                                    { type: "image_url", image_url: { url: base64Image } }
+                                    { 
+                                        type: "image_url", 
+                                        image_url: { 
+                                            url: base64Image,
+                                            detail: "high"
+                                        } 
+                                    }
                                 ]
                             }
                         ],
                         stream: false,
-                        temperature: 0.6
+                        temperature: 0.6,
+                        max_tokens: 1500
                     })
                 });
 
