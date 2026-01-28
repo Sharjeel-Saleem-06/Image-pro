@@ -450,7 +450,7 @@ const AIEnhancer = () => {
   }, [undo, redo]);
 
   const downloadResult = () => {
-    if (!currentImage || historyIndex < 0) return;
+    if (!currentImage || localHistoryIndex < 0) return;
 
     if (currentImage.toolId === 'ascii-art' && currentImage.blob) {
       // Download ASCII art as text file
@@ -674,9 +674,9 @@ const AIEnhancer = () => {
                       </div>
 
                       {/* History Position */}
-                      {history.length > 1 && (
+                      {localHistory.length > 1 && (
                         <span className="text-sm text-gray-500 border-l pl-3 border-gray-200 dark:border-gray-700">
-                          Step {historyIndex + 1} of {history.length}
+                          Step {localHistoryIndex + 1} of {localHistory.length}
                         </span>
                       )}
                     </div>
@@ -699,7 +699,7 @@ const AIEnhancer = () => {
                       >
                         <Upload className="w-4 h-4 mr-2" /> New Image
                       </Button>
-                      {historyIndex >= 0 && (
+                      {localHistoryIndex >= 0 && (
                         <Button
                           size="sm"
                           onClick={downloadResult}
@@ -750,9 +750,9 @@ const AIEnhancer = () => {
                                 />
 
                                 {/* Original Image Overlay (Hidden by default, shown on hover via button) */}
-                                {historyIndex > 0 && history[0] && (
+                                {localHistoryIndex > 0 && localHistory[0] && (
                                   <img
-                                    src={history[0].preview}
+                                    src={localHistory[0].preview}
                                     alt="Original"
                                     className="absolute top-0 left-0 max-w-full max-h-[65vh] object-contain rounded-lg shadow-md opacity-0 transition-opacity duration-200 pointer-events-none"
                                     id="original-overlay"
@@ -775,7 +775,7 @@ const AIEnhancer = () => {
                         </div>
 
                         {/* Compare Button (Overlay) */}
-                        {historyIndex > 0 && currentImage && currentImage.toolId !== 'ascii-art' && (
+                        {localHistoryIndex > 0 && currentImage && currentImage.toolId !== 'ascii-art' && (
                           <div className="absolute bottom-4 left-4 z-20">
                             <Button
                               size="sm"
@@ -820,13 +820,13 @@ const AIEnhancer = () => {
                         >
                           <h4 className="text-sm font-semibold mb-3 text-gray-600 dark:text-gray-400">History Timeline</h4>
                           <div className="flex gap-2 overflow-x-auto pb-2">
-                            {history.map((entry, idx) => (
+                            {localHistory.map((entry, idx) => (
                               <button
                                 key={entry.id}
-                                onClick={() => setHistoryIndex(idx)}
+                                onClick={() => setLocalHistoryIndex(idx)}
                                 className={`
                               flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all
-                              ${idx === historyIndex
+                              ${idx === localHistoryIndex
                                     ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md'
                                     : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}
                             `}
@@ -857,7 +857,7 @@ const AIEnhancer = () => {
                         <div className="p-4 space-y-3 max-h-[60vh] overflow-y-auto">
                           {aiTools.map((tool) => {
                             const Icon = tool.icon;
-                            const hasBeenApplied = history.some(h => h.toolId === tool.id);
+                            const hasBeenApplied = localHistory.some(h => h.toolId === tool.id);
                             const isExpanded = selectedTool === tool.id;
 
                             return (
