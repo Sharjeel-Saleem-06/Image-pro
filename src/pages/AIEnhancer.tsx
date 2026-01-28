@@ -544,7 +544,7 @@ const AIEnhancer = () => {
 
             {/* ==================== ENHANCER TAB ==================== */}
             <TabsContent value="enhance" className="space-y-8">
-              {!uploadedImage && (
+              {!localUploadedImage && (
                 <>
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -633,7 +633,7 @@ const AIEnhancer = () => {
                 </>
               )}
 
-              {uploadedImage && (
+              {localUploadedImage && (
                 <div className="space-y-6">
 
                   {/* WORKSPACE HEADER */}
@@ -974,7 +974,7 @@ const AIEnhancer = () => {
               )}
 
               {/* AI Suggestions with Grok */}
-              {uploadedImage && (
+              {localUploadedImage && (
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -996,10 +996,10 @@ const AIEnhancer = () => {
                           </p>
                           <Button
                             onClick={async () => {
-                              if (!uploadedImage) return;
+                              if (!localUploadedImage) return;
                               setIsAnalyzing(true);
                               try {
-                                const result = await analyzeImageWithGrok(uploadedImage, 'suggestions');
+                                const result = await analyzeImageWithGrok(localUploadedImage, 'suggestions');
                                 setGrokSuggestions(result);
                               } catch (e) {
                                 console.error(e);
