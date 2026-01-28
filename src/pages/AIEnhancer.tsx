@@ -298,7 +298,7 @@ const AIEnhancer = () => {
       setSelectedTool(null);
       setError(null);
     }
-  }, [requireAuth, setUploadedImage, resetHistory, addToHistory]);
+  }, [resetHistory, addToHistory]);
 
   // FIXED: Process image from CURRENT state, not always original
   const processImage = async (toolId: string) => {
