@@ -253,12 +253,7 @@ const AIEnhancer = () => {
   // const canRedo... (already from context)
 
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    // Check if user is authenticated
-    if (!requireAuth()) {
-      e.target.value = ''; // Reset input
-      return;
-    }
-
+    // Allow file upload without auth (auth will be checked during processing)
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
       setUploadedImage(file);
@@ -287,6 +282,9 @@ const AIEnhancer = () => {
 
   // FIXED: Process image from CURRENT state, not always original
   const processImage = async (toolId: string) => {
+    // Require auth for processing
+    if (!requireAuth()) return;
+    
     if (!uploadedImage || historyIndex < 0) return;
 
     setIsProcessing(true);
