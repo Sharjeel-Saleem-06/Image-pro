@@ -58,7 +58,7 @@ import {
   Clipboard,
   Lightbulb
 } from 'lucide-react';
-import { useEditor, type HistoryEntry } from '@/contexts/EditorContext'; // Use Global History
+import { type HistoryEntry } from '@/contexts/EditorContext'; // Use type only
 import { analyzeImageWithGrok, type SocialPlatform, type SocialTone } from '@/lib/grokAI'; // Import Grok AI
 import {
   generateASCIIArt,
@@ -97,25 +97,45 @@ interface ProcessingResult {
 // HistoryEntry is now imported from Context
 
 const AIEnhancer = () => {
-  // Global Editor State (Persisted across navigation)
-  const {
-    history,
-    historyIndex,
-    currentImage,
-    uploadedImage,
-    setUploadedImage,
-    addToHistory,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
-    resetHistory,
-    setHistoryIndex
-  } = useEditor();
-
+  // LOCAL state for AI Enhancer (not shared with Editor)
+  const [localHistory, setLocalHistory] = useState<HistoryEntry[]>([]);
+  const [localHistoryIndex, setLocalHistoryIndex] = useState(-1);
+  const [localUploadedImage, setLocalUploadedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  // Local UI state
+  // Computed values from local state
+  const currentImage = localHistoryIndex >= 0 ? localHistory[localHistoryIndex] : null;
+  const canUndo = localHistoryIndex > 0;
+  const canRedo = localHistoryIndex < localHistory.length - 1;
+
+  // Local history management functions
+  const addToHistory = useCallback((entry: HistoryEntry) => {
+    setLocalHistory(prev => {
+      const upToCurrent = prev.slice(0, localHistoryIndex + 1);
+      const newHistory = [...upToCurrent, entry];
+      if (newHistory.length > 30) {
+        return newHistory.slice(1);
+      }
+      return newHistory;
+    });
+    setLocalHistoryIndex(prev => Math.min(prev + 1, 29));
+  }, [localHistoryIndex]);
+
+  const undo = useCallback(() => {
+    if (localHistoryIndex > 0) setLocalHistoryIndex(localHistoryIndex - 1);
+  }, [localHistoryIndex]);
+
+  const redo = useCallback(() => {
+    if (localHistoryIndex < localHistory.length - 1) setLocalHistoryIndex(localHistoryIndex + 1);
+  }, [localHistoryIndex, localHistory.length]);
+
+  const resetHistory = useCallback(() => {
+    setLocalHistory([]);
+    setLocalHistoryIndex(-1);
+    setLocalUploadedImage(null);
+  }, []);
+
+  // Keep the rest of the state...
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -256,11 +276,11 @@ const AIEnhancer = () => {
     // Allow file upload without auth (auth will be checked during processing)
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
-      setUploadedImage(file);
+      setLocalUploadedImage(file);
       const preview = URL.createObjectURL(file);
       setImagePreview(preview);
 
-      // Reset Context History
+      // Reset Local History
       resetHistory();
 
       const originalEntry: HistoryEntry = {
@@ -272,7 +292,7 @@ const AIEnhancer = () => {
         timestamp: Date.now()
       };
 
-      // Add to context (async safe)
+      // Add to local context (async safe)
       setTimeout(() => addToHistory(originalEntry), 0);
 
       setSelectedTool(null);
@@ -285,7 +305,7 @@ const AIEnhancer = () => {
     // Require auth for processing
     if (!requireAuth()) return;
     
-    if (!uploadedImage || historyIndex < 0) return;
+    if (!localUploadedImage || localHistoryIndex < 0) return;
 
     setIsProcessing(true);
     setProcessingProgress(0);
@@ -295,17 +315,17 @@ const AIEnhancer = () => {
 
     try {
       // Get the CURRENT image to process (from history stack)
-      const currentEntry = history[historyIndex];
+      const currentEntry = localHistory[localHistoryIndex];
       let sourceFile: File;
 
       if (currentEntry.blob) {
         // Convert previous result blob to File
-        sourceFile = new File([currentEntry.blob], uploadedImage.name, {
+        sourceFile = new File([currentEntry.blob], localUploadedImage.name, {
           type: currentEntry.blob.type || 'image/png'
         });
       } else {
         // Use original uploaded file
-        sourceFile = uploadedImage;
+        sourceFile = localUploadedImage;
       }
 
       let result: string | Blob;
@@ -1180,9 +1200,9 @@ const AIEnhancer = () => {
                           <Button
                             className="bg-purple-600 hover:bg-purple-700 text-white"
                             onClick={() => {
-                              // Move to Enhancer
+                              // Move to Enhancer tab with generated image
                               const file = new File([generatedResult.blob], "generated.png", { type: "image/png" });
-                              setUploadedImage(file);
+                              setLocalUploadedImage(file);
                               setImagePreview(generatedResult.url);
 
                               const entry: HistoryEntry = {
