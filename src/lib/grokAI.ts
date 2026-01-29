@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 
-// Using GROQ API keys (not xAI Grok) - Multiple keys for fallback
+// Using GROQ API keys - Multiple keys for fallback
 const GROQ_KEYS = [
     import.meta.env.VITE_GROQ_API_KEY,
     import.meta.env.VITE_GROQ_API_KEY_2,
@@ -12,8 +12,6 @@ const GROQ_KEYS = [
 const API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 // Vision model for image analysis - Llama 4 Scout (current production model)
-// Supports: vision, multilingual, tool use, JSON mode
-// Max file size: 20MB (URL) or 4MB (base64)
 const VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
 /**
@@ -46,7 +44,7 @@ export type SocialPlatform = 'instagram' | 'twitter' | 'linkedin' | 'facebook' |
 export type SocialTone = 'professional' | 'casual' | 'humorous' | 'inspirational' | 'dramatic' | 'witty';
 
 /**
- * Analyzes an image using the Groq Vision API (Llama 3.2 Vision).
+ * Analyzes an image using the Groq Vision API (Llama 4 Scout).
  */
 export const analyzeImageWithGrok = async (
     file: File,
@@ -64,10 +62,31 @@ export const analyzeImageWithGrok = async (
     try {
         const base64Image = await fileToBase64(file);
 
-        const systemPrompt = "You are an expert AI with advanced vision capabilities, functioning as a world-class Social Media Strategist, Creative Director, and Technical Analyst. Your outputs must be highly actionable, professional, and optimized for maximum impact.";
-        let userPrompt = "";
+        // System prompt emphasizes NO markdown formatting
+        const systemPrompt = `You are an expert Social Media Strategist and Content Creator. 
 
-        const toneInstruction = `The tone of the content must be **${tone}**.`;
+CRITICAL FORMATTING RULES:
+- DO NOT use markdown formatting (no **, *, #, etc.)
+- DO NOT use bullet points with asterisks
+- Use plain text only
+- Use line breaks and spacing for structure
+- Use emojis appropriately for social media content
+- Write in a natural, readable format
+- Number lists with "1.", "2.", etc.
+- Separate sections with blank lines
+
+Your outputs must be ready to copy-paste directly to social media.`;
+
+        let userPrompt = "";
+        const toneMap: Record<SocialTone, string> = {
+            professional: "professional and polished",
+            casual: "friendly and conversational",
+            humorous: "witty and fun",
+            inspirational: "motivating and uplifting",
+            dramatic: "bold and impactful",
+            witty: "clever and smart"
+        };
+        const toneStyle = toneMap[tone];
 
         switch (type) {
             case 'caption': {
@@ -75,103 +94,319 @@ export const analyzeImageWithGrok = async (
                     ? "Instagram, Twitter, and LinkedIn"
                     : platform.charAt(0).toUpperCase() + platform.slice(1);
 
-                userPrompt = `Analyze this image and generate 5 highly engaging, viral-worthy captions specifically optimized for ${platformContext}.
+                userPrompt = `Analyze this image and create 5 engaging captions for ${platformContext}.
 
-Requirements:
-- ${toneInstruction}
-- Use emojis relevant to the image and platform.
-- Structure:
-  1. A 'Hook' (short, attention-grabbing).
-  2. A 'Story' (engaging narrative).
-  3. A 'Value-Add' (educational or inspirational).
-  4. A 'Question' (to drive engagement).
-  5. A 'Minimalist' (one-liner).`;
+Tone: ${toneStyle}
+
+Format each caption like this:
+
+CAPTION 1 (Hook)
+[Write a short, attention-grabbing caption with relevant emojis]
+
+CAPTION 2 (Story)
+[Write an engaging narrative caption that tells a story]
+
+CAPTION 3 (Value)
+[Write an educational or inspirational caption]
+
+CAPTION 4 (Question)
+[Write a caption that asks an engaging question]
+
+CAPTION 5 (Minimalist)
+[Write a punchy one-liner]
+
+Remember: No asterisks, no markdown. Just clean, copy-paste ready text.`;
                 break;
             }
 
             case 'hashtags':
-                userPrompt = `Analyze this image and generate 30 high-performing, SEO-optimized hashtags for ${platform === 'all' ? 'social media' : platform}.
-         
-Categorize them strictly into:
-1. **Mega-Viral** (1M+ posts) - Broad reach.
-2. **Niche-Specific** (100k-500k) - Targeted audience.
-3. **Community/Tribal** (10k-50k) - High engagement.
-4. **Visual Descriptors** - Content specific.
+                userPrompt = `Analyze this image and generate 30 high-performing hashtags for ${platform === 'all' ? 'social media' : platform}.
 
-Formatting: List them clearly under these headers.`;
+Format the hashtags in these categories:
+
+MEGA-VIRAL (1M+ posts)
+#hashtag1 #hashtag2 #hashtag3 #hashtag4 #hashtag5 #hashtag6 #hashtag7 #hashtag8
+
+NICHE-SPECIFIC (100k-500k posts)
+#hashtag1 #hashtag2 #hashtag3 #hashtag4 #hashtag5 #hashtag6 #hashtag7 #hashtag8
+
+COMMUNITY (10k-50k posts)
+#hashtag1 #hashtag2 #hashtag3 #hashtag4 #hashtag5 #hashtag6 #hashtag7
+
+VISUAL DESCRIPTORS
+#hashtag1 #hashtag2 #hashtag3 #hashtag4 #hashtag5 #hashtag6 #hashtag7
+
+Remember: Just the hashtags, no asterisks or special formatting. Ready to copy-paste.`;
                 break;
 
             case 'virality_score':
-                userPrompt = `Analyze this image for its "Virality Potential" on ${platform === 'all' ? 'Instagram' : platform}.
-                 
-Provide a Score from 0-10.
+                userPrompt = `Analyze this image for its virality potential on ${platform === 'all' ? 'Instagram' : platform}.
 
-Breakdown:
-- **Visual Hook**: Does it grab attention immediately?
-- **Emotional Trigger**: What emotion does it evoke?
-- **Shareability**: Why would someone share this?
+Provide your analysis in this format:
 
-Give 3 specific "Pro Tips" to increase this score (e.g., editing changes, caption angle, trending audio pairing).`;
+VIRALITY SCORE: [X/10]
+
+VISUAL HOOK
+Does it grab attention immediately? Explain why or why not.
+
+EMOTIONAL TRIGGER
+What emotion does this image evoke? How strong is it?
+
+SHAREABILITY FACTOR
+Why would someone share this? What makes it share-worthy?
+
+PRO TIPS TO BOOST VIRALITY
+
+1. [First specific tip to improve the score]
+
+2. [Second specific tip with actionable advice]
+
+3. [Third tip - could be about editing, caption, or timing]
+
+Remember: Write in plain text, no asterisks or markdown formatting.`;
                 break;
 
             case 'best_time':
-                userPrompt = `Based on the visual content of this image (e.g., coffee, sunset, office setting, party), predict the **Best Time to Post** on ${platform === 'all' ? 'Instagram and LinkedIn' : platform}.
-                 
-Explain the psychology behind the timing.
-Example: "Since this is a productivity workspace image, post on Monday at 8 AM when users are planning their week."`;
+                userPrompt = `Based on the visual content of this image, predict the best time to post on ${platform === 'all' ? 'social media platforms' : platform}.
+
+Format your response like this:
+
+BEST POSTING TIMES
+
+Primary Time: [Day] at [Time] [Timezone]
+Secondary Time: [Day] at [Time] [Timezone]
+
+WHY THIS TIMING WORKS
+
+[Explain the psychology behind the timing based on what's in the image]
+
+PLATFORM-SPECIFIC RECOMMENDATIONS
+
+Instagram: [Specific time and reason]
+LinkedIn: [Specific time and reason]  
+Twitter: [Specific time and reason]
+
+Remember: Plain text only, no asterisks or markdown.`;
                 break;
 
             case 'summary':
-                userPrompt = "Provide a comprehensive, high-fidelity description of this image. Detail the subject matter, interaction, setting, distinct colors, emotions conveyed, and any text present in the image.";
+                userPrompt = `Provide a comprehensive description of this image.
+
+Format your response like this:
+
+OVERVIEW
+[2-3 sentence summary of what the image shows]
+
+SUBJECT
+[Describe the main subject or focus]
+
+SETTING
+[Describe the environment, location, or background]
+
+COLORS AND MOOD
+[Describe the color palette and emotional atmosphere]
+
+NOTABLE DETAILS
+[List any interesting or important details]
+
+TEXT IN IMAGE
+[Transcribe any text visible, or write "None visible" if there is no text]
+
+Remember: Plain text, no asterisks or markdown formatting.`;
                 break;
 
             case 'critique':
-                userPrompt = "Conduct a rigorous Professional Photography Critique. Evaluate Composition (rule of thirds, framing), Lighting (exposure, contrast, direction), Color Theory (harmony, saturation), and Subject Isolation. Provide 3 specific, actionable edits to reach professional standards.";
+                userPrompt = `Conduct a professional photography critique of this image.
+
+COMPOSITION ANALYSIS
+[Evaluate rule of thirds, framing, balance, and visual flow]
+
+LIGHTING ASSESSMENT  
+[Evaluate exposure, contrast, direction, and quality of light]
+
+COLOR EVALUATION
+[Assess color harmony, saturation, and overall color grading]
+
+SUBJECT FOCUS
+[How well is the subject isolated and emphasized?]
+
+IMPROVEMENT RECOMMENDATIONS
+
+1. [First specific, actionable edit to improve the image]
+
+2. [Second recommendation with clear instructions]
+
+3. [Third professional tip to elevate the quality]
+
+Remember: Write in plain text without any asterisks or markdown symbols.`;
                 break;
 
             case 'suggestions':
-                userPrompt = "Act as an AI Editor. Suggest 3 specific AI enhancements. For each, explain the 'Before' state (problem) and the expected 'After' result (benefit). Example: 'Use Face Restoration because the subject is slightly out of focus.'";
+                userPrompt = `Suggest 3 AI enhancements for this image.
+
+Format each suggestion like this:
+
+ENHANCEMENT 1: [Name of Enhancement]
+Current Issue: [What problem exists in the image]
+Recommended Fix: [Which AI tool to use and why]
+Expected Result: [What the improvement will look like]
+
+ENHANCEMENT 2: [Name of Enhancement]
+Current Issue: [What problem exists]
+Recommended Fix: [Which AI tool to use]
+Expected Result: [Expected improvement]
+
+ENHANCEMENT 3: [Name of Enhancement]
+Current Issue: [What problem exists]
+Recommended Fix: [Which AI tool to use]
+Expected Result: [Expected improvement]
+
+Remember: Plain text only, no asterisks or special formatting.`;
                 break;
 
             case 'scene_analysis':
-                userPrompt = `Perform a Deep Scene Analysis.
-         
-- **Context**: What is the exact scenario?
-- **Environment**: Describe the foreground, midground, and background details.
-- **Mood/Atmosphere**: What feeling does the lighting and color grade convey?
-- **Narrative**: If this image told a story, what would it be?`;
+                userPrompt = `Perform a deep scene analysis of this image.
+
+CONTEXT
+[What scenario or situation is depicted?]
+
+FOREGROUND
+[Describe what's in the immediate front of the image]
+
+MIDGROUND
+[Describe the middle layer of the scene]
+
+BACKGROUND
+[Describe what's visible in the distance or behind the subject]
+
+MOOD AND ATMOSPHERE
+[What feeling does the lighting and colors convey?]
+
+THE STORY
+[If this image told a story, what would it be? Write 2-3 sentences.]
+
+Remember: Plain text format, no asterisks or markdown.`;
                 break;
 
             case 'object_detection':
-                userPrompt = "Perform a visual inventory. List EVERY distinct object, person, and element visible. Group them logically (e.g., 'Wearables', 'Furniture', 'Nature', 'Electronics'). Be thorough.";
+                userPrompt = `List every distinct object, person, and element visible in this image.
+
+PEOPLE
+[List all people visible with brief descriptions]
+
+OBJECTS
+[List all objects, grouped logically]
+
+NATURE ELEMENTS
+[Trees, plants, sky, water, etc.]
+
+TECHNOLOGY
+[Electronics, devices, screens, etc.]
+
+FURNITURE AND FIXTURES
+[Tables, chairs, decorations, etc.]
+
+TEXT AND SIGNAGE
+[Any visible text, logos, or signs]
+
+OTHER DETAILS
+[Anything else noteworthy]
+
+Remember: Simple list format, no asterisks or markdown symbols.`;
                 break;
 
             case 'technical':
-                userPrompt = `Provide a Technical Metadata Assessment.
-         
-- **Lighting Style**: (e.g., Rembrandt, Butterfly, Natural Golden Hour).
-- **Estimated Focal Length**: (e.g., 35mm wide vs 85mm portrait).
-- **Depth of Field**: (e.g., Shallow f/1.8 vs Deep f/8).
-- **Color Palette**: Describe the dominant hex codes or color names.`;
+                userPrompt = `Provide a technical photography assessment of this image.
+
+LIGHTING STYLE
+[Identify the lighting technique - e.g., Rembrandt, Butterfly, Natural, etc.]
+
+ESTIMATED FOCAL LENGTH
+[Estimate the lens used - wide angle, standard, telephoto]
+
+DEPTH OF FIELD
+[Shallow (blurry background) or Deep (everything in focus)]
+
+APERTURE ESTIMATE
+[Estimated f-stop based on depth of field]
+
+COLOR TEMPERATURE
+[Warm, cool, or neutral]
+
+DOMINANT COLORS
+[List the 3-5 main colors with their approximate hex codes]
+
+OVERALL STYLE
+[What photography style or genre does this fit?]
+
+Remember: Plain text, no asterisks or markdown formatting.`;
                 break;
 
             case 'color_palette':
-                userPrompt = `Extract the **Color Palette** of this image. 
-Identify the 5 distinct dominant colors.
-For each color, provide:
-- Approximate **Hex Code**.
-- **Color Name**.
-- **Psychological Effect** (e.g., Blue = Trust).`;
+                userPrompt = `Extract the color palette from this image.
+
+Identify the 5 dominant colors and format like this:
+
+COLOR 1
+Name: [Color name]
+Hex Code: #XXXXXX
+Mood: [What feeling this color evokes]
+
+COLOR 2
+Name: [Color name]
+Hex Code: #XXXXXX
+Mood: [What feeling this color evokes]
+
+COLOR 3
+Name: [Color name]
+Hex Code: #XXXXXX
+Mood: [What feeling this color evokes]
+
+COLOR 4
+Name: [Color name]
+Hex Code: #XXXXXX
+Mood: [What feeling this color evokes]
+
+COLOR 5
+Name: [Color name]
+Hex Code: #XXXXXX
+Mood: [What feeling this color evokes]
+
+PALETTE HARMONY
+[Describe how these colors work together]
+
+Remember: Plain text only, no asterisks or markdown.`;
                 break;
 
             case 'accessibility':
-                userPrompt = `Generate **SEO-Optimized Alt Text** for this image ensuring web accessibility compliance (WCAG).
-                
-Also provide a list of 10 **SEO Keywords** derived from the image content that should be included in the file name or page metadata.`;
+                userPrompt = `Generate SEO-optimized alt text and keywords for this image.
+
+ALT TEXT (Short)
+[Concise description under 125 characters for screen readers]
+
+ALT TEXT (Detailed)
+[Comprehensive description for maximum accessibility]
+
+SEO KEYWORDS
+1. [keyword]
+2. [keyword]
+3. [keyword]
+4. [keyword]
+5. [keyword]
+6. [keyword]
+7. [keyword]
+8. [keyword]
+9. [keyword]
+10. [keyword]
+
+RECOMMENDED FILENAME
+[suggested-filename-with-keywords.jpg]
+
+Remember: Plain text format, no asterisks or markdown symbols.`;
                 break;
 
             default:
-                userPrompt = customPrompt || "Analyze this image.";
+                userPrompt = customPrompt || "Analyze this image and provide a detailed description. Use plain text without any markdown formatting.";
         }
 
         let lastError: Error | null = null;
@@ -220,16 +455,19 @@ Also provide a list of 10 **SEO Keywords** derived from the image content that s
 
                 const data = await response.json();
                 console.log("✅ Groq Vision response received");
-                return data.choices[0]?.message?.content || "No analysis generated.";
+                
+                // Clean any remaining markdown artifacts from the response
+                let content = data.choices[0]?.message?.content || "No analysis generated.";
+                content = cleanMarkdownArtifacts(content);
+                
+                return content;
             } catch (e: any) {
                 console.warn(`⚠️ Groq Key failed: ${e.message}`);
                 lastError = e;
-                // Continue to next key
                 continue;
             }
         }
 
-        // If all keys fail
         throw new Error(lastError?.message || "All Groq API keys failed.");
 
     } catch (error: any) {
@@ -237,3 +475,26 @@ Also provide a list of 10 **SEO Keywords** derived from the image content that s
         throw new Error(error.message || "Failed to analyze image with Groq.");
     }
 };
+
+/**
+ * Cleans markdown artifacts from the response
+ */
+function cleanMarkdownArtifacts(text: string): string {
+    return text
+        // Remove bold markdown (**text** or __text__)
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/__([^_]+)__/g, '$1')
+        // Remove italic markdown (*text* or _text_) - be careful not to remove bullet asterisks
+        .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '$1')
+        .replace(/(?<!_)_([^_\n]+)_(?!_)/g, '$1')
+        // Remove markdown headers
+        .replace(/^#{1,6}\s+/gm, '')
+        // Clean up bullet points that use asterisks (convert to dashes or remove)
+        .replace(/^\s*\*\s+/gm, '• ')
+        // Remove code blocks
+        .replace(/```[^`]*```/g, '')
+        .replace(/`([^`]+)`/g, '$1')
+        // Clean up excessive whitespace while preserving paragraph breaks
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}

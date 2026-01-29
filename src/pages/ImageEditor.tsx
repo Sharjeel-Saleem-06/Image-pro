@@ -176,7 +176,7 @@ const ImageEditor = () => {
           reader.onloadend = () => resolve(reader.result as string);
           reader.readAsDataURL(blob);
         });
-      } else {
+    } else {
         base64Image = imageUrl;
       }
 
@@ -265,7 +265,7 @@ const ImageEditor = () => {
       if (result instanceof Blob) {
         resultBlob = result;
         resultPreview = URL.createObjectURL(result);
-      } else {
+    } else {
         // If string (url)
         const res = await fetch(result);
         resultBlob = await res.blob();
@@ -312,7 +312,7 @@ const ImageEditor = () => {
       reader.onloadend = () => {
         const base64data = reader.result as string;
         const newEntry: HistoryEntry = {
-          id: Date.now().toString(),
+      id: Date.now().toString(),
           blob: resultBlob,
           preview: base64data,
           toolId: 'ai-color-pop',
@@ -479,9 +479,9 @@ const ImageEditor = () => {
       if (!user) {
         // Just local save if no user, but alert to let them know
         alert("Image saved locally! Log in to save to cloud history.");
-        return;
-      }
-
+      return;
+    }
+    
       const fileName = `history/${user.id}/${Date.now()}_edited.png`;
 
       // Upload to Storage
@@ -510,7 +510,7 @@ const ImageEditor = () => {
 
       alert("Image saved to history successfully!");
       fetchHistory(); // Refresh the history list
-
+      
     } catch (error) {
       console.error("Save Error:", error);
       alert("Failed to save image to cloud. saved locally.");
@@ -554,7 +554,7 @@ const ImageEditor = () => {
       id: 'crop',
       name: 'Precision Crop',
       description: 'Crop to exact aspect ratios for social media and web.',
-      icon: Crop,
+    icon: Crop,
       color: 'from-orange-500 to-red-500'
     },
     {
@@ -581,26 +581,26 @@ const ImageEditor = () => {
   ];
 
   if (!source) {
-    return (
-      <Layout>
+  return (
+    <Layout>
         <div className="min-h-screen py-12 px-4 bg-gray-50/50 dark:bg-gray-900/50">
           <div className="max-w-7xl mx-auto space-y-12">
 
-            {/* Header */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
               className="text-center"
             >
               <h1 className="text-4xl md:text-6xl font-extrabold mb-6 tracking-tight">
                 <span className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
                   Pro Image Editor
-                </span>
-              </h1>
-              <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+              </span>
+            </h1>
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
                 A complete suite of professional editing tools. Adjust, filter, crop, and perfect your images in seconds.
-              </p>
-            </motion.div>
+            </p>
+          </motion.div>
 
             {/* Upload Section */}
             <motion.div
@@ -614,8 +614,8 @@ const ImageEditor = () => {
                     <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full blur-2xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
                     <div className="relative w-24 h-24 bg-white dark:bg-gray-900 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl group-hover:scale-110 transition-transform duration-300 ring-1 ring-gray-200 dark:ring-gray-700">
                       <Upload className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
-                    </div>
-                  </div>
+                      </div>
+                      </div>
 
                   <h3 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">
                     Start Editing
@@ -672,20 +672,20 @@ const ImageEditor = () => {
                           </div>
                           <h3 className="text-xl font-bold mb-3 text-gray-900 dark:text-gray-100">
                             {feature.name}
-                          </h3>
+                      </h3>
                           <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
                             {feature.description}
                           </p>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
+                </CardContent>
+              </Card>
+            </motion.div>
                   );
                 })}
-              </div>
+                      </div>
             </motion.div>
 
-          </div>
-        </div>
+                      </div>
+                      </div>
       </Layout>
     );
   }
@@ -726,18 +726,18 @@ const ImageEditor = () => {
 
 
 
-        </div>
-
+                      </div>
+                      
         {/* Improved Quick Actions Bar */}
         <div className="h-auto bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800/50 shadow-[0_-5px_20px_-5px_rgba(0,0,0,0.03)] z-10 px-6 py-4">
           <div className="max-w-screen-2xl mx-auto flex items-center justify-between gap-6">
             <div className="flex items-center gap-2">
               <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg">
                 <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              </div>
+                      </div>
               <span className="text-sm font-bold tracking-wide text-slate-900 dark:text-white uppercase hidden md:block">AI Magic</span>
-            </div>
-
+                  </div>
+                  
             <div className="flex items-center gap-4 overflow-x-auto pb-2 no-scrollbar flex-1 justify-center">
 
               {/* Global Undo/Redo Controls */}
@@ -758,8 +758,8 @@ const ImageEditor = () => {
                 >
                   <Redo2 className="w-5 h-5" />
                 </button>
-              </div>
-
+                  </div>
+                  
               {[
                 {
                   id: 'remove-bg',
@@ -810,7 +810,7 @@ const ImageEditor = () => {
                     ) : (
                       <tool.icon className="w-5 h-5" />
                     )}
-                  </div>
+                        </div>
                   <div className="flex flex-col items-start gap-0.5">
                     <span className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-none">
                       {tool.name}
@@ -820,19 +820,19 @@ const ImageEditor = () => {
                     </span>
                   </div>
                 </button>
-              ))}
-            </div>
+                      ))}
+                    </div>
 
             {/* Right Side: Download Only */}
             <div className="flex items-center border-l pl-6 border-slate-200 dark:border-slate-800">
-              <Button
-                variant="outline"
+                  <Button
+                    variant="outline"
                 onClick={handleDownload}
                 className="gap-2 rounded-xl h-11 px-6 border-2 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 font-bold transition-all"
               >
                 <Download className="w-4 h-4" />
-                Download
-              </Button>
+                    Download
+                  </Button>
             </div>
           </div>
         </div>
