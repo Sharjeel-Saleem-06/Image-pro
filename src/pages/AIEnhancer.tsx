@@ -132,7 +132,18 @@ const AIEnhancer = () => {
   const resetHistory = useCallback(() => {
     setLocalHistory([]);
     setLocalHistoryIndex(-1);
+    // NOTE: Don't reset localUploadedImage here - it's handled separately
+  }, []);
+
+  // Full reset (for "New Image" button - resets everything)
+  const fullReset = useCallback(() => {
+    setLocalHistory([]);
+    setLocalHistoryIndex(-1);
     setLocalUploadedImage(null);
+    setImagePreview(null);
+    setSelectedTool(null);
+    setError(null);
+    setGrokSuggestions(null);
   }, []);
 
   // Keep the rest of the state...

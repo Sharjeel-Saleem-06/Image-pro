@@ -3,7 +3,7 @@ import { toast } from "sonner";
 const GROK_KEYS = [
     import.meta.env.VITE_GROK_API_KEY,
     import.meta.env.VITE_GROK_API_KEY_2
-].filter(Boolean);
+].filter(key => key && !key.includes('YOUR_KEY') && !key.includes('SECOND_KEY'));
 
 const API_URL = "https://api.x.ai/v1/chat/completions";
 
@@ -47,8 +47,8 @@ export const analyzeImageWithGrok = async (
     customPrompt?: string
 ): Promise<string> => {
     if (GROK_KEYS.length === 0) {
-        const error = "Grok API Keys are missing. Please add VITE_GROK_API_KEY to your .env file.";
-        toast.error(error);
+        const error = "Grok API Keys are not configured. Please add valid xAI API keys (VITE_GROK_API_KEY) to your .env file. Get your key at https://console.x.ai/";
+        toast.error("Grok API not configured", { description: "Add valid xAI API keys to use this feature" });
         throw new Error(error);
     }
 
