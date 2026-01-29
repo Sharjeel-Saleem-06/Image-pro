@@ -1244,18 +1244,18 @@ const AIEnhancer = () => {
 
             {/* ==================== SOCIAL STUDIO TAB ==================== */}
             <TabsContent value="social">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left: Upload & Preview */}
                 <div className="lg:col-span-1 space-y-4">
-                  <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur border-gray-200 dark:border-gray-700">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
+                  <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-lg">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
                         <Share2 className="w-5 h-5 text-pink-500" /> Source Image
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       {!socialImage ? (
-                        <div className="h-64 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
+                        <div className="h-64 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-gray-300 dark:border-gray-500 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-pink-400 dark:hover:border-pink-500 transition-all cursor-pointer"
                           onClick={() => {
                             const input = document.createElement('input');
                             input.type = 'file';
@@ -1270,26 +1270,26 @@ const AIEnhancer = () => {
                             input.click();
                           }}
                         >
-                          <div className="w-16 h-16 bg-pink-100 dark:bg-pink-900/30 rounded-full flex items-center justify-center mb-4">
-                            <Instagram className="w-8 h-8 text-pink-600 dark:text-pink-400" />
+                          <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+                            <Instagram className="w-8 h-8 text-white" />
                           </div>
-                          <h4 className="font-semibold mb-2">Upload for Social Media</h4>
-                          <p className="text-sm text-gray-500">Click to upload an image to generate captions & hashtags</p>
+                          <h4 className="font-semibold mb-2 text-gray-900 dark:text-white">Upload for Social Media</h4>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Click to upload an image to generate captions & hashtags</p>
                         </div>
                       ) : (
                         <div className="space-y-4">
-                          <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm relative group">
+                          <div className="rounded-xl overflow-hidden border-2 border-gray-200 dark:border-gray-600 shadow-md relative group">
                             <img src={socialPreview!} alt="Social Context" className="w-full h-auto object-cover max-h-[400px]" />
                             <button
-                              onClick={() => { setSocialImage(null); setSocialPreview(null); }}
-                              className="absolute top-2 right-2 p-2 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => { setSocialImage(null); setSocialPreview(null); setAnalysisResult(null); }}
+                              className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
                             >
                               <X className="w-4 h-4" />
                             </button>
                           </div>
                           <Button
                             variant="outline"
-                            className="w-full"
+                            className="w-full border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
                             onClick={() => {
                               const input = document.createElement('input');
                               input.type = 'file';
@@ -1299,6 +1299,7 @@ const AIEnhancer = () => {
                                 if (file) {
                                   setSocialImage(file);
                                   setSocialPreview(URL.createObjectURL(file));
+                                  setAnalysisResult(null);
                                 }
                               };
                               input.click();
@@ -1313,32 +1314,52 @@ const AIEnhancer = () => {
                 </div>
 
                 {/* Right: Actions */}
-                <Card className="lg:col-span-2 h-fit bg-white/80 dark:bg-gray-800/80 backdrop-blur border-gray-200 dark:border-gray-700">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                <Card className="lg:col-span-2 h-fit bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-lg">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
                       <Brain className="w-5 h-5 text-blue-500" /> Content Generator
                     </CardTitle>
-                    <p className="text-sm text-gray-500">AI-powered social media manager for professional content.</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">AI-powered social media manager for professional content.</p>
                   </CardHeader>
-                  <CardContent className="space-y-6">
+                  <CardContent className="space-y-5">
 
                     {/* Platform Selector */}
                     <div className="space-y-3">
-                      <Label>Target Platform</Label>
+                      <Label className="text-gray-700 dark:text-gray-200 font-medium">Target Platform</Label>
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                        <Button variant={activePlatform === 'all' ? 'default' : 'outline'} onClick={() => setActivePlatform('all')} className="justify-start">
+                        <Button 
+                          variant={activePlatform === 'all' ? 'default' : 'outline'} 
+                          onClick={() => setActivePlatform('all')} 
+                          className={`justify-start ${activePlatform === 'all' ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900' : 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                        >
                           <Globe className="w-4 h-4 mr-2" /> All
                         </Button>
-                        <Button variant={activePlatform === 'instagram' ? 'default' : 'outline'} onClick={() => setActivePlatform('instagram')} className={`justify-start ${activePlatform === 'instagram' ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white' : ''}`}>
+                        <Button 
+                          variant={activePlatform === 'instagram' ? 'default' : 'outline'} 
+                          onClick={() => setActivePlatform('instagram')} 
+                          className={`justify-start ${activePlatform === 'instagram' ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white border-0' : 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                        >
                           <Instagram className="w-4 h-4 mr-2" /> Instagram
                         </Button>
-                        <Button variant={activePlatform === 'twitter' ? 'default' : 'outline'} onClick={() => setActivePlatform('twitter')} className={`justify-start ${activePlatform === 'twitter' ? 'bg-black text-white hover:bg-gray-800' : ''}`}>
+                        <Button 
+                          variant={activePlatform === 'twitter' ? 'default' : 'outline'} 
+                          onClick={() => setActivePlatform('twitter')} 
+                          className={`justify-start ${activePlatform === 'twitter' ? 'bg-black text-white hover:bg-gray-800 border-0' : 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                        >
                           <Twitter className="w-4 h-4 mr-2" /> Twitter/X
                         </Button>
-                        <Button variant={activePlatform === 'linkedin' ? 'default' : 'outline'} onClick={() => setActivePlatform('linkedin')} className={`justify-start ${activePlatform === 'linkedin' ? 'bg-blue-700 text-white hover:bg-blue-800' : ''}`}>
+                        <Button 
+                          variant={activePlatform === 'linkedin' ? 'default' : 'outline'} 
+                          onClick={() => setActivePlatform('linkedin')} 
+                          className={`justify-start ${activePlatform === 'linkedin' ? 'bg-blue-700 text-white hover:bg-blue-800 border-0' : 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                        >
                           <Linkedin className="w-4 h-4 mr-2" /> LinkedIn
                         </Button>
-                        <Button variant={activePlatform === 'facebook' ? 'default' : 'outline'} onClick={() => setActivePlatform('facebook')} className={`justify-start ${activePlatform === 'facebook' ? 'bg-blue-600 text-white hover:bg-blue-700' : ''}`}>
+                        <Button 
+                          variant={activePlatform === 'facebook' ? 'default' : 'outline'} 
+                          onClick={() => setActivePlatform('facebook')} 
+                          className={`justify-start ${activePlatform === 'facebook' ? 'bg-blue-600 text-white hover:bg-blue-700 border-0' : 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                        >
                           <Facebook className="w-4 h-4 mr-2" /> Facebook
                         </Button>
                       </div>
@@ -1346,12 +1367,12 @@ const AIEnhancer = () => {
 
                     {/* Tone Selector */}
                     <div className="space-y-3">
-                      <Label>Content Tone</Label>
+                      <Label className="text-gray-700 dark:text-gray-200 font-medium">Content Tone</Label>
                       <Select value={activeTone} onValueChange={(val: any) => setActiveTone(val)}>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
                           <SelectValue placeholder="Select Tone" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                           <SelectItem value="professional">👔 Professional (Corporate/LinkedIn)</SelectItem>
                           <SelectItem value="casual">😊 Casual (Friends/Lifestyle)</SelectItem>
                           <SelectItem value="humorous">😂 Humorous (Witty/Funny)</SelectItem>
@@ -1362,68 +1383,79 @@ const AIEnhancer = () => {
                       </Select>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {/* Content Type Buttons */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                       <Button
                         variant={analysisType === 'caption' ? 'default' : 'outline'}
                         onClick={() => setAnalysisType('caption')}
+                        className={analysisType === 'caption' ? 'bg-purple-600 hover:bg-purple-700 text-white border-0' : 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}
                       >
                         <MessageSquare className="w-4 h-4 mr-2" /> Captions
                       </Button>
                       <Button
                         variant={analysisType === 'hashtags' ? 'default' : 'outline'}
                         onClick={() => setAnalysisType('hashtags')}
+                        className={analysisType === 'hashtags' ? 'bg-blue-600 hover:bg-blue-700 text-white border-0' : 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}
                       >
                         <Hash className="w-4 h-4 mr-2" /> Hashtags
                       </Button>
                       <Button
                         variant={analysisType === 'virality_score' ? 'default' : 'outline'}
                         onClick={() => setAnalysisType('virality_score')}
-                        className={analysisType === 'virality_score' ? 'bg-orange-600 text-white' : ''}
+                        className={analysisType === 'virality_score' ? 'bg-orange-600 hover:bg-orange-700 text-white border-0' : 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}
                       >
                         <Activity className="w-4 h-4 mr-2" /> Virality Score
                       </Button>
                       <Button
                         variant={analysisType === 'best_time' ? 'default' : 'outline'}
                         onClick={() => setAnalysisType('best_time')}
-                        className={analysisType === 'best_time' ? 'bg-green-600 text-white' : ''}
+                        className={analysisType === 'best_time' ? 'bg-green-600 hover:bg-green-700 text-white border-0' : 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}
                       >
                         <Clock className="w-4 h-4 mr-2" /> Best Time
                       </Button>
                     </div>
 
-                    <div className="relative min-h-[250px] p-6 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
+                    {/* Results Area */}
+                    <div className="relative min-h-[200px] p-5 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
                       {isAnalyzing ? (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/50 dark:bg-black/50 backdrop-blur-sm rounded-xl z-20">
-                          <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-2" />
-                          <p className="font-medium">Crafting perfect content...</p>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl z-20">
+                          <Loader2 className="w-10 h-10 text-purple-600 animate-spin mb-3" />
+                          <p className="font-medium text-gray-900 dark:text-white">Crafting perfect content...</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Analyzing image with AI</p>
                         </div>
                       ) : null}
 
                       {analysisResult ? (
-                        <div className="prose dark:prose-invert max-w-none">
-                          <div className="flex justify-between items-start mb-4">
-                            <h4 className="text-lg font-semibold capitalize text-gray-700 dark:text-gray-200">{analysisType.replace('_', ' ')} Results</h4>
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="ghost" onClick={() => navigator.clipboard.writeText(analysisResult)}>
-                                <Clipboard className="w-4 h-4 mr-2" /> Copy
-                              </Button>
-                            </div>
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center">
+                            <h4 className="text-lg font-semibold capitalize text-gray-900 dark:text-white">{analysisType.replace('_', ' ')} Results</h4>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => {
+                                navigator.clipboard.writeText(analysisResult);
+                              }}
+                              className="border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                              <Clipboard className="w-4 h-4 mr-2" /> Copy
+                            </Button>
                           </div>
-                          <div className="whitespace-pre-wrap text-sm leading-relaxed text-gray-600 dark:text-gray-300 font-mono bg-white dark:bg-gray-800 p-4 rounded-lg border">
+                          <div className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 max-h-[300px] overflow-y-auto">
                             {analysisResult}
                           </div>
                         </div>
                       ) : (
-                        <div className="flex flex-col items-center justify-center h-full py-8 text-gray-400">
-                          <MessageSquare className="w-12 h-12 mb-3 opacity-20" />
-                          <p>Select platform, tone, and type to start</p>
+                        <div className="flex flex-col items-center justify-center h-full py-10 text-gray-400 dark:text-gray-500">
+                          <MessageSquare className="w-14 h-14 mb-4 opacity-30" />
+                          <p className="font-medium text-gray-600 dark:text-gray-400">Ready to generate content</p>
+                          <p className="text-sm mt-1">Upload an image and click Generate</p>
                         </div>
                       )}
                     </div>
 
                     <Button
                       size="lg"
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
+                      className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg font-semibold py-6"
                       disabled={!socialImage || isAnalyzing}
                       onClick={async () => {
                         if (!socialImage) return;
@@ -1439,7 +1471,17 @@ const AIEnhancer = () => {
                         }
                       }}
                     >
-                      {isAnalyzing ? 'Processing...' : 'Generate Content'}
+                      {isAnalyzing ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-5 h-5 mr-2" />
+                          Generate Content
+                        </>
+                      )}
                     </Button>
                   </CardContent>
                 </Card>

@@ -11,8 +11,8 @@ const GROQ_KEYS = [
 
 const API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-// Vision model for image analysis
-const VISION_MODEL = "llama-3.2-90b-vision-preview";
+// Vision model for image analysis (updated - 90b was decommissioned)
+const VISION_MODEL = "llama-3.2-11b-vision-preview";
 
 /**
  * Converts a File object to a Base64 string.
