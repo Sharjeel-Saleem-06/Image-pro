@@ -1,9 +1,12 @@
 import { toast } from "sonner";
 
-// Using GROQ API keys (not xAI Grok)
+// Using GROQ API keys (not xAI Grok) - Multiple keys for fallback
 const GROQ_KEYS = [
     import.meta.env.VITE_GROQ_API_KEY,
-    import.meta.env.VITE_GROQ_API_KEY_2
+    import.meta.env.VITE_GROQ_API_KEY_2,
+    import.meta.env.VITE_GROQ_API_KEY_3,
+    import.meta.env.VITE_GROQ_API_KEY_4,
+    import.meta.env.VITE_GROQ_API_KEY_5
 ].filter(Boolean);
 
 const API_URL = "https://api.groq.com/openai/v1/chat/completions";
